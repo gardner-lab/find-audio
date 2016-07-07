@@ -47,48 +47,42 @@ double vectorDistance(double *s, double *t, int ns, int nt, int k, int i, int j)
 }
 
 void dtw_ua_c(double *s, double *t, int ns, int nt, int k, double *dp) {
-    double **D;
+    double *D[2];
     int i, j;
     int j1, j2;
     double cost, temp;
     
-    // printf("ns=%d, nt=%d, w=%d, s[0]=%f, t[0]=%f\n",ns,nt,s[0],t[0]);
-    
     // create D
-    D = (double **)mxMalloc((ns+1) * sizeof(double *));
-    for (i = 0; i < ns + 1; i++) {
-        D[i]=(double *)mxMalloc((nt+1)*sizeof(double));
-    }
+    D[0] = (double *)mxMalloc((nt + 1) * sizeof(double));
+    D[1] = (double *)mxMalloc((nt + 1) * sizeof(double));
     
     // initialization
-    for (i = 0; i < ns + 1; i++) {
-        for (j = 0; j < nt + 1 ; j++) {
-            D[i][j] = (i == 0 ? 0 : DBL_MAX);
-        }
+    for (j = 0; j <= nt; j++) {
+        D[0][j] = 0;
     }
     
     // dynamic programming
     for (i = 1; i <= ns; i++) {
+        D[i % 2][0] = DBL_MAX;
+        
         for (j = 1; j <= nt; j++) {
             // calculate norm
             cost = vectorDistance(s, t, ns, nt, k, i - 1, j - 1);
             
-            temp = D[i - 1][j];
-            if (D[i][j - 1] < temp) temp = D[i][j - 1];
-            if(D[i - 1][j - 1] < temp) temp = D[i - 1][j - 1];
+            temp = D[(i - 1) % 2][j];
+            if (D[i % 2][j - 1] < temp) temp = D[i % 2][j - 1];
+            if(D[(i - 1) % 2][j - 1] < temp) temp = D[(i - 1) % 2][j - 1];
             
-            D[i][j] = cost + temp;
+            D[i % 2][j] = cost + temp;
         }
     }
     
     /* copy to output vector */
-    memcpy(dp, &D[ns][1], nt * sizeof(double));
+    memcpy(dp, D[ns % 2] + 1, nt * sizeof(double));
     
     // free D
-    for (i = 0; i < ns + 1; i++) {
-        mxFree(D[i]);
-    }
-    mxFree(D);
+    mxFree(D[0]);
+    mxFree(D[1]);
 }
 
 /* the gateway function */
@@ -101,7 +95,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     
     /*  check for proper number of arguments */
     if (nrhs != 2) {
-        mexErrMsgIdAndTxt("MATLAB:dtw_ua_c:invalidNumInputs","Two inputs required.");
+        mexErrMsgIdAndTxt("MATLAB:dtw_ua_c:invalidNumInputs", "Two inputs required.");
     }
     if (nlhs != 1) {
         mexErrMsgIdAndTxt( "MATLAB:dtw_ua_c:invalidNumOutputs", "dtw_ua_c: One output required.");
