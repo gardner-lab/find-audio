@@ -55,9 +55,9 @@ void dtw_ua_c(double *s, double *t, int ns, int nt, int k, double *dp) {
     // printf("ns=%d, nt=%d, w=%d, s[0]=%f, t[0]=%f\n",ns,nt,s[0],t[0]);
     
     // create D
-    D = (double **)malloc((ns+1) * sizeof(double *));
+    D = (double **)mxMalloc((ns+1) * sizeof(double *));
     for (i = 0; i < ns + 1; i++) {
-        D[i]=(double *)malloc((nt+1)*sizeof(double));
+        D[i]=(double *)mxMalloc((nt+1)*sizeof(double));
     }
     
     // initialization
@@ -86,9 +86,9 @@ void dtw_ua_c(double *s, double *t, int ns, int nt, int k, double *dp) {
     
     // free D
     for (i = 0; i < ns + 1; i++) {
-        free(D[i]);
+        mxFree(D[i]);
     }
-    free(D);
+    mxFree(D);
 }
 
 /* the gateway function */
