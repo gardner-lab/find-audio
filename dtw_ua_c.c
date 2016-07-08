@@ -28,17 +28,17 @@
 #include <Accelerate/Accelerate.h>
 #endif
 
-double vectorDistance(double *s, double *t, int ns, int nt, int k, int i, int j) {
+double vectorDistance(double *s, double *t, int k) {
     double result=0;
 #if __APPLE__
     // surprisingly, this may not be faster...
-    vDSP_distancesqD(s + k * i, 1, t + k * j, 1, &result, k);
+    vDSP_distancesqD(s, 1, t, 1, &result, k);
 #else
     double ss, tt;
     int x;
     for (x = 0; x < k; x++) {
-        ss = s[k * i + x];
-        tt = t[k * j + x];
+        ss = s[x];
+        tt = t[x];
         result += ((ss - tt) * (ss - tt));
     }
 #endif
@@ -65,22 +65,13 @@ void dtw_ua_c(double *s, double *t, int ns, int nt, int k, double *dp, int *dq) 
     int cur, last;
     
     // create D
-    D[0] = (double *)mxMalloc((nt + 1) * sizeof(double));
-    D[1] = (double *)mxMalloc((nt + 1) * sizeof(double));
+    D[0] = (double *)mxCalloc(nt + 1, sizeof(double));
+    D[1] = (double *)mxCalloc(nt + 1, sizeof(double));
     
 #ifdef CALCULATE_PATH
-    P[0] = (struct path *)mxMalloc((nt + 1) * sizeof(struct path));
-    P[1] = (struct path *)mxMalloc((nt + 1) * sizeof(struct path));
+    P[0] = (struct path *)mxCalloc(nt + 1, sizeof(struct path));
+    P[1] = (struct path *)mxCalloc(nt + 1, sizeof(struct path));
 #endif
-    
-    // initialization
-    for (j = 0; j <= nt; j++) {
-        D[0][j] = 0;
-#ifdef CALCULATE_PATH
-        P[0][j].up = 0;
-        P[0][j].left = 0;
-#endif
-    }
     
     // dynamic programming
     for (i = 1; i <= ns; i++) {
@@ -91,7 +82,7 @@ void dtw_ua_c(double *s, double *t, int ns, int nt, int k, double *dp, int *dq) 
         
         for (j = 1; j <= nt; j++) {
             // calculate norm
-            cost = vectorDistance(s, t, ns, nt, k, i - 1, j - 1);
+            cost = vectorDistance(s + k * (i - 1), t + k * (j - 1), k);
             
             a = D[last][j]; // up
             b = D[cur][j - 1]; // left
