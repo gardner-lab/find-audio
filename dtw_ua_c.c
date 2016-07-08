@@ -53,7 +53,7 @@ struct path {
 };
 #endif
 
-void dtw_ua_c(double *s, double *t, int ns, int nt, int k, double *dp, int *dq) {
+void dtw_ua_c(double *s, double *t, int ns, int nt, int k, double alpha, double *dp, int *dq) {
     double *D[2];
 #ifdef CALCULATE_PATH
     struct path *P[2];
@@ -84,8 +84,8 @@ void dtw_ua_c(double *s, double *t, int ns, int nt, int k, double *dp, int *dq) 
             // calculate norm
             cost = vectorDistance(s + k * (i - 1), t + k * (j - 1), k);
             
-            a = D[last][j]; // up
-            b = D[cur][j - 1]; // left
+            a = alpha * D[last][j]; // up
+            b = alpha * D[cur][j - 1]; // left
             c = D[last][j - 1]; // diagonal
             
             if (a < b && a < c) {
@@ -133,17 +133,27 @@ void dtw_ua_c(double *s, double *t, int ns, int nt, int k, double *dp, int *dq) 
 #endif
 }
 
+double getScalar(const mxArray *in, const char *err_id, const char *err_str) {
+    /* check scalar */
+    if (!mxIsDouble(in) || mxIsComplex(in) || mxGetN(in) * mxGetM(in) != 1) {
+        mexErrMsgIdAndTxt(err_id, err_str);
+    }
+    
+    /* get the scalar input */
+    return mxGetScalar(in);
+}
+
 /* the gateway function */
 void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     double *s,*t;
     int w;
     int ns,nt,k;
+    double alpha;
     double *dp;
     int *dq;
-    double *result;
     
     /*  check for proper number of arguments */
-    if (nrhs != 2) {
+    if (nrhs != 2 && nrhs != 3) {
         mexErrMsgIdAndTxt("MATLAB:dtw_ua_c:invalidNumInputs", "Two inputs required.");
     }
 #ifdef CALCULATE_PATH
@@ -155,6 +165,14 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         mexErrMsgIdAndTxt( "MATLAB:dtw_ua_c:invalidNumOutputs", "One output required.");
     }
 #endif
+    
+    /* get alpha */
+    if (nrhs >= 3) {
+        alpha = getScalar(prhs[2], "MATLAB:dtw_ua_c:alphaNotScalar", "Alpha must be a scalar.");
+    }
+    else {
+        alpha = 1;
+    }
     
     /*  create a pointer to the input matrix s */
     s = mxGetPr(prhs[0]);
@@ -190,5 +208,5 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 #endif
     
     /*  call the C subroutine */
-    dtw_ua_c(s, t, ns, nt, k, dp, dq);
+    dtw_ua_c(s, t, ns, nt, k, alpha, dp, dq);
 }

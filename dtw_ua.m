@@ -1,12 +1,16 @@
-function [d, p] = dtw_ua(s, t)
+function [d, p] = dtw_ua(s, t, alpha)
 % s: signal 1, size is ns*k, column for time, row for channel 
 % t: signal 2, size is nt*k, column for time, row for channel 
+% alpha: non-diagonal penalty multiplier
 % d: resulting distances
 
 ns = size(s, 2);
 nt = size(t, 2);
 if size(s, 1) ~= size(t, 1)
     error('Error in dtw_ua: the dimensions of the two input signals do not match.');
+end
+if ~exist('alpha', 'var') || isempty(alpha)
+    alpha = 1;
 end
 
 %% initialization
@@ -20,7 +24,7 @@ Pleft = zeros(ns + 1, nt + 1, 'int32');
 for i = 1:ns
     for j = 1:nt
         oost = norm(s(:, i) - t(:, j));
-        [cost, idx] = min([D(i,j) D(i + 1, j) D(i, j + 1)]);
+        [cost, idx] = min([D(i, j) alpha * D(i + 1, j) alpha * D(i, j + 1)]);
         
         D(i + 1, j + 1) = oost + cost;
         switch idx

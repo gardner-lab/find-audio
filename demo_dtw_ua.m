@@ -15,22 +15,24 @@ a=rand(10, 100);
 b=rand(10, 500);
 
 tic;
-d1=dtw_ua(a,b);
+[d1,p1]=dtw_ua(a, b);
 t1=toc;
 
 tic;
-d2=dtw_ua_c(a,b);
+[d2,p2]=dtw_ua_c(a, b);
 t2=toc;
 
 fprintf('Using Matlab version: distance=%f, running time=%f\n',min(d1),t1);
 fprintf('Using C/MEX version: distance=%f, running time=%f\n',min(d2),t2);
 
 % checks
-disp(mean(d1 - d2));
-subplot(2,1,1);plot(d1);
-subplot(2,1,2);plot(d2);
+disp(any(p1(:) ~= p2(:)));
+disp(max(abs(d1 - d2)));
+ax1 = subplot(2, 1, 1); plot(1:length(d1), d1, 1:length(d1), sum(p1));
+ax2 = subplot(2, 1, 2); plot(1:length(d2), d2, 1:length(d2), sum(p2));
+linkaxes([ax1, ax2], 'x');
 
-
+% benchmark
 tms = zeros(1, 1000);
 for i = 1:1000
     tic;
