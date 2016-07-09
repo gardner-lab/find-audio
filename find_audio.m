@@ -145,9 +145,11 @@ function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin
         
         % debug window
         if debug
-            figure;
+            % print threshold
+            fprintf('Threshold: %f\n', thresh_score);
             
             % plot
+            figure;
             ax1 = subplot(4, 1, 1); imagesc(1:size(feat_audio, 2), 1:size(feat_audio, 1), feat_audio);
             ax2 = subplot(4, 1, 2); plot(1:size(feat_audio, 2), o_scores); line([1 size(feat_audio, 2)], [1 1] * thresh_score, 'Color', [1 0 0]);
             ax3 = subplot(4, 1, 3); plot(1:size(feat_audio, 2), abs(path(1, :) - path(2, :))); line([1 size(feat_audio, 2)], [1 1] * threshold_length, 'Color', [1 0 0]);
