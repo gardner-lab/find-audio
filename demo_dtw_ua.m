@@ -15,11 +15,11 @@ a=rand(10, 100);
 b=rand(10, 500);
 
 tic;
-[d1,p1]=dtw_ua(a, b);
+[d1,p1]=dtw_ua(a, b, 1.5);
 t1=toc;
 
 tic;
-[d2,p2]=dtw_ua_c(a, b);
+[d2,p2]=dtw_ua_c(a, b, 1.5);
 t2=toc;
 
 fprintf('Using Matlab version: distance=%f, running time=%f\n',min(d1),t1);

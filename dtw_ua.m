@@ -24,9 +24,11 @@ Pleft = zeros(ns + 1, nt + 1, 'int32');
 for i = 1:ns
     for j = 1:nt
         oost = norm(s(:, i) - t(:, j));
-        [cost, idx] = min([D(i, j) alpha * D(i + 1, j) alpha * D(i, j + 1)]);
+        [cost, idx] = min([D(i, j) + oost, ...
+            D(i + 1, j) + oost * alpha, ...
+            D(i, j + 1) + oost * alpha]);
         
-        D(i + 1, j + 1) = oost + cost;
+        D(i + 1, j + 1) = cost;
         switch idx
             case 1 % diagonal
                 Pleft(i + 1, j + 1) = Pleft(i, j);

@@ -82,13 +82,13 @@ void dtw_ua_xcorr_c(double *s, double *t, int ns, int nt, int k, int maxLag, dou
             // calculate norm
             cost = 1 / vectorXcorr(s + k * (i - 1), t + k * (j - 1), k, maxLag, xcorr_mem_in, xcorr_mem_out);
             
-            a = alpha * D[last][j]; // up
-            b = alpha * D[cur][j - 1]; // left
-            c = D[last][j - 1]; // diagonal
+            a = D[last][j] + cost * alpha; // up
+            b = D[cur][j - 1] + cost * alpha; // left
+            c = D[last][j - 1] + cost; // diagonal
             
             if (a < b && a < c) {
                 // up
-                D[cur][j] = cost + a;
+                D[cur][j] = a;
 #ifdef CALCULATE_PATH
                 P[cur][j] = P[last][j];
                 P[cur][j].up++;
@@ -96,7 +96,7 @@ void dtw_ua_xcorr_c(double *s, double *t, int ns, int nt, int k, int maxLag, dou
             }
             else if (b < c) {
                 // left
-                D[cur][j] = cost + b;
+                D[cur][j] = b;
 #ifdef CALCULATE_PATH
                 P[cur][j] = P[cur][j - 1];
                 P[cur][j].left++;
@@ -104,7 +104,7 @@ void dtw_ua_xcorr_c(double *s, double *t, int ns, int nt, int k, int maxLag, dou
             }
             else {
                 // diagonal
-                D[cur][j] = cost + c;
+                D[cur][j] = c;
 #ifdef CALCULATE_PATH
                 P[cur][j] = P[last][j - 1];
 #endif

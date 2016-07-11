@@ -28,10 +28,12 @@ Pleft = zeros(ns + 1, nt + 1, 'int32');
 for i = 1:ns
     for j = 1:nt
         xc = xcorr(s(:, i), t(:, j), max_lag);
-        cost = 1 / max(xc);
-        [last, idx] = min([D(i, j) alpha * D(i + 1, j) alpha * D(i, j + 1)]);
+        oost = 1 / max(xc);
+        [cost, idx] = min([D(i, j) + oost, ...
+            D(i + 1, j) + oost * alpha, ...
+            D(i, j + 1) + oost * alpha]);
         
-        D(i + 1, j + 1) = last + cost;
+        D(i + 1, j + 1) = cost;
         switch idx
             case 1 % diagonal
                 Pleft(i + 1, j + 1) = Pleft(i, j);
