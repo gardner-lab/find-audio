@@ -2,7 +2,7 @@ function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin
 %FIND_AUDIO
 
     %% parameters
-    alpha = 1.001;
+    alpha = 2;
     constrain_length = 0.07; % fraction +/- template length
     match_forward = true;
     match_backward = true;
@@ -31,11 +31,18 @@ function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin
     starts = [];
     ends = [];
     range_scores = [];
+    
+    %% checks
+    % short circuit a lot of analysis in clear failure cases
+    
+    % way too short audio
+    if length(audio) < length(template) * (1 - constrain_length)
+        return;
+    end
 
     %% prepare audio
     feat_template = features_spectral(template, fs);
     [feat_audio, t_audio] = features_spectral(audio, fs);
-    
 
     %% forward matching
     if match_forward
