@@ -1,13 +1,4 @@
 /**
- * Copyright (C) 2013 Quan Wang <wangq10@rpi.edu>,
- * Signal Analysis and Machine Perception Laboratory,
- * Department of Electrical, Computer, and Systems Engineering,
- * Rensselaer Polytechnic Institute, Troy, NY 12180, USA
- *
- * Modified by L. Nathan Perkins to support unannchored `s`.
- */
-
-/** 
  * This is the C/MEX code of dynamic time warping of two signals
  *
  * compile: 
@@ -15,7 +6,7 @@
  *
  * usage:
  *     d=dtw_ua_c(s,t)
- *     where s is unanchored signal 1, t is signal 2
+ *     where s is unanchored signal 1 (template), t is signal 2 (signal)
  */
 
 #include "mex.h"
@@ -29,7 +20,8 @@
 #endif
 
 double vectorDistance(double *s, double *t, int k) {
-    double result=0;
+    double result = 0;
+    
 #if __APPLE__
     // surprisingly, this may not be faster...
     vDSP_distancesqD(s, 1, t, 1, &result, k);
@@ -42,95 +34,99 @@ double vectorDistance(double *s, double *t, int k) {
         result += ((ss - tt) * (ss - tt));
     }
 #endif
+    
     result = sqrt(result);
+    
     return result;
 }
 
-#ifdef CALCULATE_PATH
-struct path {
-    int up;
-    int left;
-};
-#endif
-
-void dtw_ua_c(double *s, double *t, int ns, int nt, int k, double alpha, double *dp, int *dq) {
-    double *D[2];
-#ifdef CALCULATE_PATH
-    struct path *P[2];
-#endif
-    int i, j;
-    int j1, j2;
+void dtw_ua_c(double *mat_template, double *mat_signal, int cols_template, int cols_signal, int rows, double *alphas, double *out_score, double *out_start) {
+    // memory
+    double *mat_score[2]; // matrix of scores
+    int *mat_start[2]; // matrix of starts
+    
+    // iteration variables
+    int i_template, i_signal;
+    int col_cur, col_last;
+    int row_cur, row_last;
+    
+    // per iteration variables
     double cost;
-    double a, b, c;
-    int cur, last;
+    double alpha;
+    double t_path, b_path;
+    int b_start;
     
-    // create D
-    D[0] = (double *)mxCalloc(nt + 1, sizeof(double));
-    D[1] = (double *)mxCalloc(nt + 1, sizeof(double));
+    // allocate memory
+    mat_score[0] = (double *)mxCalloc(cols_template + 1, sizeof(double));
+    mat_score[1] = (double *)mxCalloc(cols_template + 1, sizeof(double));
     
-#ifdef CALCULATE_PATH
-    P[0] = (struct path *)mxCalloc(nt + 1, sizeof(struct path));
-    P[1] = (struct path *)mxCalloc(nt + 1, sizeof(struct path));
-#endif
+    mat_start[0] = (int *)mxCalloc(cols_template + 1, sizeof(int));
+    mat_start[1] = (int *)mxCalloc(cols_template + 1, sizeof(int));
+    
+    // seed memory
+    for (i_template = 1; i_template <= cols_template; ++i_template) {
+        row_cur = i_template;
+        mat_score[0][row_cur] = DBL_MAX;
+    }
     
     // dynamic programming
-    for (i = 1; i <= ns; i++) {
-        cur = i % 2;
-        last = (i - 1) % 2;
+    // for each column of the signal...
+    for (i_signal = 1; i_signal <= cols_signal; ++i_signal) {
+        // iteration variables (easier lookup in matrix)
+        col_cur = i_signal % 2;
+        col_last = (i_signal - 1) % 2;
         
-        D[cur][0] = DBL_MAX;
+        // seed start
+        mat_start[col_cur][0] = i_signal;
         
-        for (j = 1; j <= nt; j++) {
+        // for each column of the tempalte...
+        for (i_template = 1; i_template <= cols_template; ++i_template) {
+            // iteration variables (easier lookup in matrix)
+            row_cur = i_template;
+            row_last = i_template - 1;
+            
+            // get current alpha
+            alpha = alphas[i_template - 1];
+            
             // calculate norm
-            cost = vectorDistance(s + k * (i - 1), t + k * (j - 1), k);
+            cost = vectorDistance(mat_signal + rows * (i_signal - 1), mat_template + rows * (i_template - 1), rows);
             
-            a = D[last][j] + cost * alpha; // up
-            b = D[cur][j - 1] + cost * alpha; // left
-            c = D[last][j - 1] + cost; // diagonal
+            // diagonal
+            b_path = mat_score[col_last][row_last] + cost;
+            b_start = mat_start[col_last][row_last];
             
-            if (a < b && a < c) {
-                // up
-                D[cur][j] = a;
-#ifdef CALCULATE_PATH
-                P[cur][j] = P[last][j];
-                P[cur][j].up++;
-#endif
+            // up
+            t_path = mat_score[col_cur][row_last] + cost * alpha;
+            if (t_path < b_path) {
+                b_path = t_path;
+                b_start = mat_start[col_cur][row_last];
             }
-            else if (b < c) {
-                // left
-                D[cur][j] = b;
-#ifdef CALCULATE_PATH
-                P[cur][j] = P[cur][j - 1];
-                P[cur][j].left++;
-#endif
+            
+            // left
+            t_path = mat_score[col_last][row_cur] + cost * alpha;
+            if (t_path < b_path) {
+                b_path = t_path;
+                b_start = mat_start[col_last][row_cur];
             }
-            else {
-                // diagonal
-                D[cur][j] = c;
-#ifdef CALCULATE_PATH
-                P[cur][j] = P[last][j - 1];
-#endif
-            }
+            
+            // store values
+            mat_score[col_cur][row_cur] = b_path;
+            mat_start[col_cur][row_cur] = b_start;
+        }
+        
+        // store values
+        row_cur = cols_template; // does not actually need to be reset
+        out_score[i_signal - 1] = mat_score[col_cur][row_cur];
+        if (out_start) {
+            out_start[i_signal - 1] = (double)mat_start[col_cur][row_cur];
         }
     }
     
-    /* copy to output vector */
-    memcpy(dp, D[ns % 2] + 1, nt * sizeof(double));
-    
-#ifdef CALCULATE_PATH
-    /* copy to output vcetor */
-    if (dq) {
-        memcpy(dq, P[ns % 2] + 1, nt * sizeof(struct path));
-    }
-#endif
-    
     // free memory
-    mxFree(D[0]);
-    mxFree(D[1]);
-#ifdef CALCULATE_PATH
-    mxFree(P[0]);
-    mxFree(P[1]);
-#endif
+    mxFree(mat_score[0]);
+    mxFree(mat_score[1]);
+    mxFree(mat_start[0]);
+    mxFree(mat_start[1]);
 }
 
 double getScalar(const mxArray *in, const char *err_id, const char *err_str) {
@@ -145,33 +141,20 @@ double getScalar(const mxArray *in, const char *err_id, const char *err_str) {
 
 /* the gateway function */
 void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-    double *s,*t;
-    int w;
+    double *s, *t;
     int ns,nt,k;
     double alpha;
+    double *alphas;
+    bool free_alphas = false;
     double *dp;
-    int *dq;
+    double *dq;
     
     /*  check for proper number of arguments */
     if (nrhs != 2 && nrhs != 3) {
         mexErrMsgIdAndTxt("MATLAB:dtw_ua_c:invalidNumInputs", "Two inputs required.");
     }
-#ifdef CALCULATE_PATH
     if (nlhs != 1 && nlhs != 2) {
         mexErrMsgIdAndTxt( "MATLAB:dtw_ua_c:invalidNumOutputs", "One or two outputs required.");
-    }
-#else
-    if (nlhs != 1) {
-        mexErrMsgIdAndTxt( "MATLAB:dtw_ua_c:invalidNumOutputs", "One output required.");
-    }
-#endif
-    
-    /* get alpha */
-    if (nrhs >= 3) {
-        alpha = getScalar(prhs[2], "MATLAB:dtw_ua_c:alphaNotScalar", "Alpha must be a scalar.");
-    }
-    else {
-        alpha = 1;
     }
     
     /*  create a pointer to the input matrix s */
@@ -190,23 +173,53 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         mexErrMsgIdAndTxt("MATLAB:dtw_ua_c:dimNotMatch", "Dimensions of input s and t must match.");
     }
     
+    /* get alpha */
+    if (nrhs >= 3) {
+        // accept vector or scalar
+        if (mxGetN(prhs[2]) == ns && mxGetM(prhs[2]) == 1) {
+            alphas = mxGetPr(prhs[2]);
+        }
+        else {
+            alpha = getScalar(prhs[2], "MATLAB:dtw_ua_c:alphaNotScalar", "Alpha must be a scalar or a vector with length matching input s.");
+            
+            free_alphas = true;
+            alphas = (double *)mxMalloc(ns * sizeof(double));
+            for (int i = 0; i < ns; ++i) {
+                alphas[i] = alpha;
+            }
+        }
+    }
+    else {
+        free_alphas = true;
+        alphas = (double *)mxMalloc(ns * sizeof(double));
+        for (int i = 0; i < ns; ++i) {
+            alphas[i] = 1;
+        }
+    }
+    
     /*  set the output pointer to the output matrix */
     plhs[0] = mxCreateDoubleMatrix(1, nt, mxREAL);
     
     /*  create a C pointer to a copy of the output matrix */
     dp = mxGetPr(plhs[0]);
     
-#ifdef CALCULATE_PATH
     /* save path information */
     if (nlhs == 2) {
         /* create output matrix */
-        plhs[1] = mxCreateNumericMatrix(2, nt, (sizeof(int) == 8 ? mxINT64_CLASS : mxINT32_CLASS), mxREAL);
+        plhs[1] = mxCreateDoubleMatrix(1, nt, mxREAL);
         
         /* create a C pointer */
-        dq = (int *)mxGetPr(plhs[1]);
+        dq = mxGetPr(plhs[1]);
     }
-#endif
+    else {
+        dq = NULL;
+    }
     
     /*  call the C subroutine */
-    dtw_ua_c(s, t, ns, nt, k, alpha, dp, dq);
+    dtw_ua_c(s, t, ns, nt, k, alphas, dp, dq);
+    
+    /* release any memory allocated */
+    if (free_alphas) {
+        mxFree(alphas);
+    }
 }

@@ -1,4 +1,4 @@
-function [d, p] = dtw_ua(s, t, alpha)
+function [scores, starts] = dtw_ua(s, t, alphas)
 % s: signal 1, size is ns*k, column for time, row for channel 
 % t: signal 2, size is nt*k, column for time, row for channel 
 % alpha: non-diagonal penalty multiplier
@@ -9,42 +9,45 @@ nt = size(t, 2);
 if size(s, 1) ~= size(t, 1)
     error('Error in dtw_ua: the dimensions of the two input signals do not match.');
 end
-if ~exist('alpha', 'var') || isempty(alpha)
-    alpha = 1;
+if ~exist('alphas', 'var') || isempty(alphas)
+    alphas = 1;
+end
+if isscalar(alphas)
+    alphas = alphas * ones(1, ns);
+end
+if length(alphas) ~= ns
+    error('The length of alpha does not match input signal s.');
 end
 
 %% initialization
 D = zeros(ns + 1, nt + 1) + Inf; % cache matrix
 D(1, :) = 0; % unanchored
 
-Pup = zeros(ns + 1, nt + 1, 'int32');
-Pleft = zeros(ns + 1, nt + 1, 'int32');
+starts = zeros(ns + 1, nt + 1);
+starts(1, :, :) = repmat(0:nt, 1, 1);
 
 %% begin dynamic programming
 for i = 1:ns
     for j = 1:nt
         oost = norm(s(:, i) - t(:, j));
         [cost, idx] = min([D(i, j) + oost, ...
-            D(i + 1, j) + oost * alpha, ...
-            D(i, j + 1) + oost * alpha]);
+            D(i + 1, j) + oost * alphas(i), ...
+            D(i, j + 1) + oost * alphas(i)]);
         
         D(i + 1, j + 1) = cost;
         switch idx
             case 1 % diagonal
-                Pleft(i + 1, j + 1) = Pleft(i, j);
-                Pup(i + 1, j + 1) = Pup(i, j);
+                starts(i + 1, j + 1) = starts(i, j);
             case 2 % left
-                Pleft(i + 1, j + 1) = Pleft(i + 1, j) + 1;
-                Pup(i + 1, j + 1) = Pup(i + 1, j);
+                starts(i + 1, j + 1) = starts(i + 1, j);
             case 3 % up
-                Pleft(i + 1, j + 1) = Pleft(i, j + 1);
-                Pup(i + 1, j + 1) = Pup(i, j + 1) + 1;
+                starts(i + 1, j + 1) = starts(i, j + 1);
         end
     end
 end
 
 %% output
-d = D(end, 2:end);
-p = [Pup(end, 2:end); Pleft(end, 2:end)];
+scores = D(end, 2:end);
+starts = starts(end, 2:end);
 
 end
