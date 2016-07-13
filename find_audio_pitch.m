@@ -1,8 +1,10 @@
-function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin)
+function [starts, ends, range_scores] = find_audio_pitch(audio, template, fs, varargin)
 %FIND_AUDIO
 
     %% parameters
     alpha = [];
+    max_lag = 5;
+    log_multiplier = 100;
     constrain_length = 0.07; % fraction +/- template length
     match_forward = true;
     match_backward = true;
@@ -101,23 +103,15 @@ function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin
     %% helper functions
     
     function [spect, tms] = features_spectral(signal, fs)
-        % windows
-        t = -fft_window / 2 + 1:fft_window / 2;
-        s = fs * sigma / 1e3; % conver sigma from ms to sample count
-        w = exp(-(t ./ s).^2); % window
-        dw = -2 .* w .* (t ./ (s ^ 2)); % derivative of window
-        
         % normalize
         signal = signal ./ max(abs(signal));
         
-        % take the two spectrograms, use simple "multi-taper" approach
-        [s, freq, tms] = spectrogram(signal, w, fft_overlap, [], fs);
-        s2 = spectrogram(signal, dw, fft_overlap, [], fs);
+        % calculate reassigned spectrogram
+        [spect, freq, tms] = ifdv_log(signal, fs, fft_window, fft_overlap, sigma, 1, 1, 5, 5, log_multiplier);
         
         % mask frequency
         freq_mask = freq >= freq_range(1) & freq <= freq_range(2);
-        
-        spect = (abs(s(freq_mask, :)) + abs(s2(freq_mask, :))) ./ 2;
+        spect = 1 + spect(freq_mask, :);
     end
 
     function idx = sliding_window_indices(length, win_length, win_step)
@@ -128,7 +122,7 @@ function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin
     function [match_starts, match_ends, match_scores] = match_via_dtw(feat_template, feat_audio, thresh_score)
         % calcualte scores
         % cor has corresponding start times for minimum warping path
-        [scores, cor] = dtw_ua_c(feat_template, feat_audio, alpha);
+        [scores, cor] = dtpa_c(feat_template, feat_audio, max_lag, alpha);
         change_in_len = (1:length(scores)) - cor - size(feat_template, 2);
         
         % debug

@@ -1,12 +1,12 @@
 /**
- * This is the C/MEX code of dynamic time warping of two signals
+ * This is the C/MEX code of dynamic time pitch alignment
  *
  * compile: 
- *     mex dtw_v2_c.c
+ *     mex dtpa_c.c
  *
  * usage:
- *     d=dtw_v2_c(s,t[,maxLag[,alpha]])
- *     where s is unanchored signal 1, t is signal 2
+ *     d=dtpa_c(s,t[,maxLag[,alpha]])
+ *     where s is unanchored signal 1 (template), t is signal 2 (signal)
  */
 
 #include "mex.h"
@@ -263,7 +263,11 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         }
     }
     else {
-        alpha = 1;
+        free_alphas = true;
+        alphas = (double *)mxMalloc(ns * sizeof(double));
+        for (int i = 0; i < ns; ++i) {
+            alphas[i] = 1;
+        }
     }
     
     /*  set the output pointer to the output matrix */
