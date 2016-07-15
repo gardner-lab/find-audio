@@ -1,4 +1,4 @@
-function [scores, starts] = dtw_ua(s, t, alphas)
+function path = dtw_path(s, t, alphas)
 % s: signal 1, size is ns*k, column for time, row for channel 
 % t: signal 2, size is nt*k, column for time, row for channel 
 % alpha: non-diagonal penalty multiplier
@@ -7,7 +7,7 @@ function [scores, starts] = dtw_ua(s, t, alphas)
 ns = size(s, 2);
 nt = size(t, 2);
 if size(s, 1) ~= size(t, 1)
-    error('Error in dtw_ua: the dimensions of the two input signals do not match.');
+    error('Error in dtw the dimensions of the two input signals do not match.');
 end
 if ~exist('alphas', 'var') || isempty(alphas)
     alphas = 1;
@@ -21,33 +21,46 @@ end
 
 %% initialization
 D = zeros(ns + 1, nt + 1) + Inf; % cache matrix
-D(1, :) = 0; % unanchored
+D(1, 1) = 0; % unanchored
 
-starts = zeros(ns + 1, nt + 1);
-starts(1, :) = 0:nt;
+% track steps
+steps = zeros(ns + 1, nt + 1);
 
 %% begin dynamic programming
 for i = 1:ns
     for j = 1:nt
+        % current cost
         oost = norm(s(:, i) - t(:, j));
+        
+        % transition cost and index
         [cost, idx] = min([D(i, j) + oost, ...
             D(i + 1, j) + oost * alphas(i), ...
             D(i, j + 1) + oost * alphas(i)]);
         
+        % store
         D(i + 1, j + 1) = cost;
-        switch idx
-            case 1 % diagonal
-                starts(i + 1, j + 1) = starts(i, j);
-            case 2 % left
-                starts(i + 1, j + 1) = starts(i + 1, j);
-            case 3 % up
-                starts(i + 1, j + 1) = starts(i, j + 1);
-        end
+        steps(i + 1, j + 1) = idx;
     end
 end
 
-%% output
-scores = D(end, 2:end);
-starts = starts(end, 2:end);
+%% assemble path
+path = zeros(2, ns + nt + 1);
+i = ns;
+j = nt;
+k = 1;
+while i > 0 || j > 0
+    path(:, k) = [i; j];
+    switch steps(i + 1, j + 1)
+        case 1
+            i = i - 1;
+            j = j - 1;
+        case 2
+            j = j - 1;
+        case 3
+            i = i - 1;
+    end
+    k = k + 1;
+end
+path = path(:, (k - 1):-1:1);
 
 end
