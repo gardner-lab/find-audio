@@ -1,4 +1,4 @@
-function [warped_time, warped_audio, warped_data] = warp_audio(audio, template, fs, data, varargin)
+function [warped_time, warped_audio, warped_data, path] = warp_audio(audio, template, fs, data, varargin)
 %WARP_AUDIO
 
 
