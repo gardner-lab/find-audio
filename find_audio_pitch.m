@@ -49,7 +49,7 @@ function [starts, ends, range_scores] = find_audio_pitch(audio, template, fs, va
     %% fill in parameters
     if isempty(alpha)
         cols = size(feat_template, 2);
-        alpha = 5 * 0.9 .^ ([0:(ceil(cols / 2) - 1) (floor(cols / 2) - 1):-1:0]) + 2;
+        alpha = 1 * 0.9 .^ ([0:(ceil(cols / 2) - 1) (floor(cols / 2) - 1):-1:0]) + 2;
     end
 
     %% forward matching
@@ -143,6 +143,9 @@ function [starts, ends, range_scores] = find_audio_pitch(audio, template, fs, va
             threshold_length = constrain_length * size(feat_template, 2);
             scores(abs(change_in_len) > threshold_length) = nan;
         end
+        
+        % no zero starts
+        scores(cor == 0) = nan;
 
         % find minimum by sliding window
         idx = sliding_window_indices(length(scores), round(size(feat_template, 2) / 2), round(size(feat_template, 2) / 4));
