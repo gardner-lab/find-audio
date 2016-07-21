@@ -48,11 +48,13 @@ function [warped_time, warped_audio, warped_data, path] = warp_audio(audio, temp
     warped_time = [t_template; warp_time(t_audio, path)];
     
     % warp audio
-    warped_audio = warp_audio(audio, path);
-    warped_audio = exact_rows(warped_audio, length(template), 0);
+    if nargout >= 2
+        warped_audio = warp_audio(audio, path);
+        warped_audio = exact_rows(warped_audio, length(template), 0);
+    end
     
     % warp data
-    if isempty(data)
+    if isempty(data) || nargout < 3
         warped_data = [];
     else
         warped_data = warp_data_by_interp(data, path, length(template));
@@ -144,7 +146,30 @@ function [warped_time, warped_audio, warped_data, path] = warp_audio(audio, temp
         fft_smps = (fft_window / 2) + 8 * (0:(path(1, end) - 1));
         tms = interp1(fft_smps, smoothed, 1:des_len, 'linear', 'extrap');
         
-        warped = interp1(1:size(data, 1), data, tms, 'pchip', 'extrap');
+        % interpolate
+        % but leave nan values outside of interpolation range
+        % code below replaces that by repeating first/last row
+        warped = interp1(1:size(data, 1), data, tms, 'pchip', nan);
+        
+        % replace nan values
+        need_replace = any(isnan(warped), 2);
+        
+        % add beginning rows
+        j = 1;
+        row = warped(find(~any(isnan(warped), 2), 1, 'first'), :);
+        while need_replace(j)
+            warped(j, :) = row;
+            j = j + 1;
+        end
+        
+        % add ending rows
+        j = size(warped, 1);
+        row = warped(find(~any(isnan(warped), 2), 1, 'last'), :);
+        while need_replace(j)
+            warped(j, :) = row;
+            j = j - 1;
+        end
+        
         %[warped, ~] = resample(data, tms ./ fs);
     end
 
