@@ -117,6 +117,7 @@ function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin
         % mask frequency
         freq_mask = freq >= freq_range(1) & freq <= freq_range(2);
         
+        % combine spectrogram
         spect = (abs(s(freq_mask, :)) + abs(s2(freq_mask, :))) ./ 2;
     end
 
