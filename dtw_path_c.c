@@ -90,22 +90,30 @@ mxArray *dtw_path_c(double *mat_template, double *mat_signal, int cols_template,
             // calculate norm
             cost = vectorDistance(mat_signal + rows * (i_signal - 1), mat_template + rows * (i_template - 1), rows);
             
-            // diagonal
-            b_path = mat_score[col_last + row_last] + cost;
-            b_step = DIAGONAL;
-            
-            // up
-            t_path = mat_score[col_cur + row_last] + cost * alpha;
-            if (t_path < b_path) {
-                b_path = t_path;
-                b_step = UP;
+            // special is nan
+            if isnan(cost) {
+                // assume diagonal
+                b_path = mat_score[col_last + row_last];
+                b_step = DIAGONAL;
             }
-            
-            // left
-            t_path = mat_score[col_last + row_cur] + cost * alpha;
-            if (t_path < b_path) {
-                b_path = t_path;
-                b_step = LEFT;
+            else {
+                // diagonal
+                b_path = mat_score[col_last + row_last] + cost;
+                b_step = DIAGONAL;
+                
+                // up
+                t_path = mat_score[col_cur + row_last] + cost * alpha;
+                if (t_path < b_path) {
+                    b_path = t_path;
+                    b_step = UP;
+                }
+                
+                // left
+                t_path = mat_score[col_last + row_cur] + cost * alpha;
+                if (t_path < b_path) {
+                    b_path = t_path;
+                    b_step = LEFT;
+                }
             }
             
             // store values

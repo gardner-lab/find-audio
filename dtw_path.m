@@ -33,9 +33,15 @@ for i = 1:ns
         oost = norm(s(:, i) - t(:, j));
         
         % transition cost and index
-        [cost, idx] = min([D(i, j) + oost, ...
-            D(i + 1, j) + oost * alphas(i), ...
-            D(i, j + 1) + oost * alphas(i)]);
+        if isnan(oost)
+            cost = D(i, j);
+            idx = 1;
+        else
+            [cost, idx] = min([D(i, j) + oost, ...
+                D(i + 1, j) + oost * alphas(i), ...
+                D(i, j + 1) + oost * alphas(i)]);
+        end
+            
         
         % store
         D(i + 1, j + 1) = cost;

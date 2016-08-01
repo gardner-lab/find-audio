@@ -30,9 +30,14 @@ starts(1, :) = 0:nt;
 for i = 1:ns
     for j = 1:nt
         oost = norm(s(:, i) - t(:, j));
-        [cost, idx] = min([D(i, j) + oost, ...
-            D(i + 1, j) + oost * alphas(i), ...
-            D(i, j + 1) + oost * alphas(i)]);
+        if isnan(oost)
+            cost = D(i, j);
+            idx = 1;
+        else
+            [cost, idx] = min([D(i, j) + oost, ...
+                D(i + 1, j) + oost * alphas(i), ...
+                D(i, j + 1) + oost * alphas(i)]);
+        end
         
         D(i + 1, j + 1) = cost;
         switch idx
