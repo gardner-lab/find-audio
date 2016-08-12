@@ -30,10 +30,9 @@ im2 = im;
 
 % annotate
 figure;
-image(t, f, im);
+image(t, f, im); axis xy;
 line([starts; starts], [ones(size(starts)) * f(1); ones(size(starts)) * f(end)], 'Color', [0 1 0], 'LineWidth', 2);
 line([ends; ends], [ones(size(ends)) * f(1); ones(size(ends)) * f(end)], 'Color', [1 0 0], 'LineWidth', 2);
-xlim([20 28]);
 
 % start zoom
 h = zoom;

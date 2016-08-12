@@ -8,11 +8,12 @@ function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin
     match_backward = true;
     fft_window = 512; % samples
     fft_overlap = 472; % samples
+    fft_log = false;
     sigma = 2; % ms
     freq_range = [1e3 9e3];
     threshold_score = [];
     debug = false; % popup figures showing scores, path lengths and thresholds
-    max_overlap = 0; % fraction of template length
+    max_overlap = 0.1; % fraction of template length
 
     % load custom parameters
     nparams = length(varargin);
@@ -119,6 +120,11 @@ function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin
         
         % combine spectrogram
         spect = (abs(s(freq_mask, :)) + abs(s2(freq_mask, :))) ./ 2;
+        
+        % log
+        if fft_log
+            spect = log(spect);
+        end
     end
 
     function idx = sliding_window_indices(length, win_length, win_step)

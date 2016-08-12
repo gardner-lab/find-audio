@@ -1,5 +1,5 @@
 function [starts, ends, range_scores] = find_audio_pitch(audio, template, fs, varargin)
-%FIND_AUDIO
+%FIND_AUDIO_PITCH
 
     %% parameters
     alpha = [];
@@ -10,11 +10,12 @@ function [starts, ends, range_scores] = find_audio_pitch(audio, template, fs, va
     match_backward = true;
     fft_window = 512; % samples
     fft_overlap = 472; % samples
+    fft_log = false;
     sigma = 2; % ms
     freq_range = [1e3 9e3];
     threshold_score = [];
     debug = false; % popup figures showing scores, path lengths and thresholds
-    max_overlap = 0; % fraction of template length
+    max_overlap = 0.1; % fraction of template length
 
     % load custom parameters
     nparams = length(varargin);
@@ -112,6 +113,11 @@ function [starts, ends, range_scores] = find_audio_pitch(audio, template, fs, va
         % mask frequency
         freq_mask = freq >= freq_range(1) & freq <= freq_range(2);
         spect = 1 + spect(freq_mask, :);
+        
+        % log
+        if fft_log
+            spect = log(spect);
+        end
     end
 
     function idx = sliding_window_indices(length, win_length, win_step)
