@@ -1,4 +1,5 @@
 function [scores, starts] = dtw_ua_cos(s, t, alphas)
+%DTW_UA_COS
 % s: signal 1, size is ns*k, column for time, row for channel 
 % t: signal 2, size is nt*k, column for time, row for channel 
 % alpha: non-diagonal penalty multiplier
