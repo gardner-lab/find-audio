@@ -1,5 +1,59 @@
 function [warped_time, warped_audio, warped_data, path] = warp_audio(audio, template, fs, data, varargin)
-%WARP_AUDIO
+%WARP_AUDIO Uses dynamic time warping to warp audio and data to template
+%   This function uses dynamic time warping to find the path that best maps
+%   an audio signal onto an audio template, using very similar principles
+%   to the FIND_AUDIO command. Spectral features are calculated using the
+%   two-taper spectrogram approach with large overlap between windows to
+%   provide the best precision during remapping.
+%
+%   WARPED_TIME = WARP_AUDIO(AUDIO, TEMPLATE, FS) takes an AUDIO clip that
+%   was found by FIND_AUDIO (or is in some way already cropped to contain a
+%   single song rendition), which is then compared with TEMPLATE through
+%   dynamic time warping. Both audio clips must have the same sampling rate
+%   FS. WARPED_TIME is a 2 x N matrix where the first row are times
+%   throughout the template and the second row represents corresponding
+%   times in the new audio signal.
+%
+%   [WARPED_TIME, WARPED_AUDIO] = WARP_AUDIO(...) generates a new version
+%   of AUDIO after warping. Note that this is not playable audio and likely
+%   has many artifacts, as audio warping is simply achieved by repeating or
+%   removing columns from the STFT.
+%
+%   [WARPED_TIME, WARPED_AUDIO, WARPED_DATA] = WARP_AUDIO(AUDIO, TEMPLATE, 
+%   FS, DATA) will warp auxilary data at the same time was warping the
+%   audio. DATA must have the same sampling rate as AUDIO. Warping is
+%   achieved by interpolating between points in DATA as needed to add or
+%   remove samples. Multiple data streams can be wapred simultaneously, all
+%   as columns of DATA.
+%
+%   [WARPED_TIME, WARPED_AUDIO, WARPED_DATA, PATH] = WARP_AUDIO(...)
+%   returns the PATH from the dynamic time wapring process. See DTW_PATH
+%   for more details.
+%
+%   Optional parameters can be passed after the data parameter (if no data
+%   to warp, pass an empty matrix for data):
+%
+%   WARP_AUDIO(..., 'alpha', ALPHA) overrides the default alpha penalty 
+%   used for non-diagonal steps in the dynamic time warping. ALPHA can be a
+%   scalar or vector corresponding to the number of spectral columns in
+%   TEMPLATE. The default values penalizes nondiagonal steps most at the
+%   beginning and end of the template.
+%
+%   WARP_AUDIO(..., 'fft_window', FFT_WINDOW) overides the default size of
+%   the window used when calculating spectral features. Defaults to 1024.
+%
+%   WARP_AUDIO(..., 'fft_overlap', FFT_OVERLAP) overides the default
+%   amount of overlap between the window. More overlap provides a more
+%   precise warping, but requires more memory and computation. Defaults to
+%   1016.
+%
+%   WARP_AUDIO(..., 'sigma', SIGMA) overides the sigma parameter for the
+%   Gaussian window used when calculating the spectral window. Defaults to
+%   2ms.
+%
+%   WARP_AUDIO(..., 'freq_range', FREQ_RANGE) overrides the default
+%   frequency range used for warping. FREQ_RANGE must be a vector of length
+%   two. Defaults to [1000 9000] Hz.
 
 
     %% parameters
@@ -58,7 +112,6 @@ function [warped_time, warped_audio, warped_data, path] = warp_audio(audio, temp
         warped_data = [];
     else
         warped_data = warp_data_by_interp(data, path, length(template));
-        %warped_data = warp_data_by_ds(data, path, length(template));
         warped_data = exact_rows(warped_data, length(template), []);
     end
         
@@ -86,7 +139,7 @@ function [warped_time, warped_audio, warped_data, path] = warp_audio(audio, temp
 
     function path = warp_path_via_dtw(feat_template, feat_audio)
         % calcualte scores
-        path = dtw_path_c(feat_template, feat_audio, alpha);
+        path = dtw_path(feat_template, feat_audio, alpha);
     end
 
     function warped = warp_time(time, path)
@@ -171,22 +224,6 @@ function [warped_time, warped_audio, warped_data, path] = warp_audio(audio, temp
         end
         
         %[warped, ~] = resample(data, tms ./ fs);
-    end
-
-    function warped = warp_data_by_ds(data, path, des_len)
-        % down sample
-        % from # of rows to # of path steps
-        data_ds = resample(data, path(2, end), size(data, 1));
-        
-        % warp data
-        data_warped = zeros(path(1, end), size(data, 2));
-        for j = 1:path(1, end)
-            idx = path(1, :) == j;
-            data_warped(j, :) = mean(data_ds(path(2, idx), :), 1);
-        end
-        
-        % up sample
-        warped = resample(data_warped, des_len, path(1, end));
     end
 
     function v = exact_rows(v, rows, pad)
