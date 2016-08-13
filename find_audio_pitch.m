@@ -46,6 +46,7 @@ function [starts, ends, range_scores] = find_audio_pitch(audio, template, fs, va
     threshold_score = [];
     debug = false; % popup figures showing scores, path lengths and thresholds
     max_overlap = 0.1; % fraction of template length
+    calculate_threshold = false; % used internally for calculating threshold
 
     % load custom parameters
     nparams = length(varargin);
@@ -103,6 +104,14 @@ function [starts, ends, range_scores] = find_audio_pitch(audio, template, fs, va
         starts = cat(2, starts, m_starts);
         ends = cat(2, ends, m_ends);
         range_scores = cat(2, range_scores, m_scores);
+    end
+    
+    %% special mode for calculating thresholds
+    if calculate_threshold
+        starts = 0;
+        ends = 0;
+        range_scores = max(range_scores);
+        return;
     end
     
     %% deduplicate
@@ -171,6 +180,15 @@ function [starts, ends, range_scores] = find_audio_pitch(audio, template, fs, va
             scores_median = median(scores);
             scores_min = min(scores);
             thresh_score = (scores_median + scores_min) / 2;
+            
+            if calculate_threshold
+                match_starts = 0;
+                match_ends = 0;
+                match_scores = thresh_score;
+                return;
+            else
+                warning('Threshold determined automatically.');
+            end
         end
         scores(scores >= thresh_score) = nan;
 
@@ -193,15 +211,12 @@ function [starts, ends, range_scores] = find_audio_pitch(audio, template, fs, va
         
         % debug window
         if debug
-            % print threshold
-            fprintf('Threshold: %f\n', thresh_score);
-            
             % plot
             figure;
-            ax1 = subplot(4, 1, 1); imagesc(1:size(feat_audio, 2), 1:size(feat_audio, 1), feat_audio);
-            ax2 = subplot(4, 1, 2); plot(1:size(feat_audio, 2), o_scores); line([1 size(feat_audio, 2)], [1 1] * thresh_score, 'Color', [1 0 0]);
-            ax3 = subplot(4, 1, 3); plot(1:size(feat_audio, 2), abs(change_in_len)); line([1 size(feat_audio, 2)], [1 1] * threshold_length, 'Color', [1 0 0]);
-            ax4 = subplot(4, 1, 4); scatter(find(~isnan(scores)), scores(~isnan(scores)));
+            ax1 = subplot(4, 1, 1); imagesc(1:size(feat_audio, 2), 1:size(feat_audio, 1), feat_audio); axis xy; set(gca, 'Xtick',[], 'Ytick', []);
+            ax2 = subplot(4, 1, 2); plot(1:size(feat_audio, 2), o_scores); line([1 size(feat_audio, 2)], [1 1] * thresh_score, 'Color', [1 0 0]); ylabel('Score'); set(gca, 'Xtick',[]);
+            ax3 = subplot(4, 1, 3); plot(1:size(feat_audio, 2), abs(change_in_len)); line([1 size(feat_audio, 2)], [1 1] * threshold_length, 'Color', [1 0 0]); ylabel('Score'); set(gca, 'Xtick',[]);
+            ax4 = subplot(4, 1, 4); scatter(find(~isnan(scores)), scores(~isnan(scores))); ylabel('Score'); set(gca, 'Xtick',[]);
             hold on; scatter(potential_ends, scores(potential_ends), 'x'); hold off;
             
             % nice axes
