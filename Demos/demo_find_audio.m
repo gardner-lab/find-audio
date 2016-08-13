@@ -1,18 +1,25 @@
+% Demo of finding audio (uses automatically caulated threshold)
+% NOTE: Visualizations require the zftftb library.
+
+%% LOAD
+
 % load audio
 [y, fs] = audioread('audio.wav');
-[template, template_fs] = audioread('template2.wav');
+[template, template_fs] = audioread('template.wav');
 if fs ~= template_fs
     error('Mismatched sampling rates.');
 end
+
+%% PREPARE VISUAL
 
 % display band
 disp_band = [1e3 1e4];
 
 % aligned
-[im, f, t] = zftftb_pretty_sonogram(y, fs, ...
-    'len', 16.7, 'overlap', 14, 'zeropad', 0, 'filtering', 500, ...
-    'clipping', [-2 2], 'norm_amp', 1);
+[im, f, t] = zftftb_pretty_sonogram(y, fs, 'len', 16.7, 'overlap', 14, ...
+    'zeropad', 0, 'filtering', 500, 'clipping', [-2 2], 'norm_amp', 1);
 
+% stard and end index
 startidx = find(f<=disp_band(1), 1, 'last');
 stopidx = find(f>=disp_band(2), 1, 'first');
 
@@ -22,11 +29,12 @@ im = im2uint8(im(startidx:stopidx, :));
 % convert to red green blue
 im = ind2rgb(im, parula(256));
 
-% copy image
-im2 = im;
+%% RUN SEARCH
 
 % find
 [starts, ends] = find_audio(y, template, fs, 'debug', true);
+
+%% DISPLAY VISUAL
 
 % annotate
 figure;

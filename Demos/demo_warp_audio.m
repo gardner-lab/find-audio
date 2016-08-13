@@ -1,9 +1,17 @@
+% Demo of warping audio and data (uses automatically caulated threshold)
+% and generates simulated data as sin / cos wave.
+% NOTE: Visualizations require the zftftb library.
+
+%% LOAD
+
 % load audio
 [y, fs] = audioread('template1.wav');
 [template, template_fs] = audioread('template2.wav');
 if fs ~= template_fs
     error('Mismatched sampling rates.');
 end
+
+%% PREPARE VISUAL
 
 % display band
 disp_band = [1e3 1e4];
@@ -17,13 +25,19 @@ disp_band = [1e3 1e4];
     'len', 16.7, 'overlap', 14, 'zeropad', 0, 'filtering', 500, ...
     'clipping', [-2 2], 'norm_amp', 1);
 
-% find
+%% RUN WARPING
+
+% generate some synthetic data
 data = [sin((1:length(y)) / 250)' cos((1:length(y)) / 250)'];
 [warped_time, warped_audio, warped_data] = warp_audio(y, template, fs, data, 'debug', true);
+
+%% PREPARE VISUAL OF WARPED AUDIO
 
 [im3, f3, t3] = zftftb_pretty_sonogram(warped_audio, fs, ...
     'len', 16.7, 'overlap', 14, 'zeropad', 0, 'filtering', 500, ...
     'clipping', [-2 2], 'norm_amp', 1);
+
+%% DISPLAY VISUAL
 
 figure;
 ln = randi(size(warped_time, 2));
