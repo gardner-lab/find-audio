@@ -1,5 +1,85 @@
 function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin)
-%FIND_AUDIO
+%FIND_AUDIO Uses unanchored dynamic time warping to find template in audio
+%   This function uses dynamic time warping to search audio for occurence
+%   of a specific template. The approach looks through the audio both
+%   forward and backward to find the best possible start and end points,
+%   and then applies a two stage thresholding process to find likely
+%   candidates. It first uses the variability in the length of the
+%   occurence (it must be within a certain percentage of the length of the
+%   template). It then looks at the score for the dynamic time warping path
+%   as compared with a threshold (the primary tunable parameter for the
+%   function).
+%
+%   After identifying a short list of potential start and end points based
+%   on score and length thresholds, the function removes duplicate matches
+%   based on overlap, always preserving the match with the best score. 
+%
+%   [STARTS, ENDS] = FIND_AUDIO(AUDIO, TEMPLATE, FS) searches AUDIO for
+%   occurences of TEMPLATE and returns the STARTS and ENDS times (in
+%   seconds) of potential matches. Both AUDIO and TEMPLATE must have the
+%   same sample rate, FS. STARTS and ENDS are vectors with the same length.
+%
+%   [STARTS, ENDS, RANGE_SCORES] = FIND_AUDIO(...) also returns the score
+%   associated with each match. RANGE_SCORES is a vector of the same length
+%   as STARTS and ENDS.
+%
+%   Optional parameters can be passed as string value pairs. The parameters
+%   are (in order of likelihood of use):
+%
+%   FIND_AUDIO(..., 'threshold_score', THRESHOLD) specifies the threshold
+%   for a good match. For consistency, this parameter should always be
+%   provided. Helper function THRESHOLD_FOR_FIND_AUDIO helps calculate a
+%   good threshold. Dynamic time warping above the threshold are ignored.
+%   If not specified, the function will try to calculate a threshold
+%   automatically, but this only works well if AUDIO contains both silence
+%   and a few renditions of the TEMPLATE audio.
+%
+%   FIND_AUDIO(..., 'max_overlap', MAX_OVERLAP) determines how much overlap
+%   can exist between matches of the template, as a percentage of the
+%   template length. The default value is 0.1 (or 10%).
+%
+%   FIND_AUDIO(..., 'constrain_length', LENGTH) constrains the length of
+%   matches to plus or minus the fraction of the template length. LENGTH
+%   defaults to 0.07, allowing matches to be plus or minus 7% of the
+%   template length.
+%
+%   FIND_AUDIO(..., 'match_forward', FORWARD) allows you to disable forward
+%   matching. By default, the system looks at the audio and template both
+%   forward and backwards for the best matches. Using only one direction
+%   will be less precise, but faster. Set FORWARD to false to disable.
+%
+%   FIND_AUDIO(..., 'match_backward', BACKWARD) allows you to disable
+%   backward matching. By default, the system looks at the audio and 
+%   template both forward and backwards for the best matches. Using only 
+%   one direction will be less precise, but faster. Set BACKWARD to false
+%   to disable.
+%
+%   FIND_AUDIO(..., 'debug', DEBUG) set DEBUG to true to enable debugging.
+%   Additional information is printed as well as figures opened showing
+%   both forward and backward matches.
+%
+%   FIND_AUDIO(..., 'alpha', ALPHA) overrides the default alpha penalty 
+%   used for non-diagonal steps in the dynamic time warping. ALPHA can be a
+%   scalar or vector corresponding to the number of spectral columns in
+%   TEMPLATE. The default values penalizes nondiagonal steps most at the
+%   beginning and end of the template.
+%
+%   FIND_AUDIO(..., 'fft_window', FFT_WINDOW) overides the default size of
+%   the window used when calculating spectral features. Defaults to 512.
+%
+%   FIND_AUDIO(..., 'fft_overlap', FFT_OVERLAP) overides the default
+%   amount of overlap between the window. Defaults to 472.
+%
+%   FIND_AUDIO(..., 'fft_log', FFT_LOG) allows using the log of the
+%   spectrogram for searching. Set FFT_LOG to true to enable.
+%
+%   FIND_AUDIO(..., 'sigma', SIGMA) overides the sigma parameter for the
+%   Gaussian window used when calculating the spectral window. Defaults to
+%   2ms.
+%
+%   FIND_AUDIO(..., 'freq_range', FREQ_RANGE) overrides the default
+%   frequency range used for warping. FREQ_RANGE must be a vector of length
+%   two. Defaults to [1000 9000] Hz.
 
     %% parameters
     alpha = [];
@@ -135,7 +215,7 @@ function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin
     function [match_starts, match_ends, match_scores] = match_via_dtw(feat_template, feat_audio, thresh_score)
         % calcualte scores
         % cor has corresponding start times for minimum warping path
-        [scores, cor] = dtw_ua_c(feat_template, feat_audio, alpha);
+        [scores, cor] = dtw_ua(feat_template, feat_audio, alpha);
         change_in_len = (1:length(scores)) - cor - size(feat_template, 2);
         
         % debug

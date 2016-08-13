@@ -1,5 +1,35 @@
 function [starts, ends, range_scores] = find_audio_pitch(audio, template, fs, varargin)
-%FIND_AUDIO_PITCH
+%FIND_AUDIO_PITCH Uses dynamic time warping to find template in audio
+%   This function uses dynamic time warping to search audio for occurence
+%   of a specific template. The approach looks through the audio both
+%   forward and backward to find the best possible start and end points,
+%   and then applies a two stage thresholding process to find likely
+%   candidates. It first uses the variability in the length of the
+%   occurence (it must be within a certain percentage of the length of the
+%   template). It then looks at the score for the dynamic time warping path
+%   as compared with a threshold (the primary tunable parameter for the
+%   function).
+%
+%   After identifying a short list of potential start and end points based
+%   on score and length thresholds, the function removes duplicate matches
+%   based on overlap, always preserving the match with the best score. 
+%
+%   Unlike FIND_AUDIO, this uses reassigned spectrograms with the y-axis
+%   log scaled, and allows pitch translations.
+%
+%   See FIND_AUDIO for usage. This function has the same parameters and
+%   behavior.
+%
+%   There are a few additional parameters avaiable, although they likely do
+%   not need to be changed.
+%
+%   FIND_AUDIO_PITCH(..., 'max_lag', MAX_LAG) sets the maximum vertical
+%   translation between the audio and template. Depending on the
+%   fundamental frequency, the effect of this varies. The default is 5.
+%
+%   FIND_AUDIO_PITCH(..., 'log_multiplier', LOG_MULTIPLIER) sets the
+%   multiplier on the frequency bin used before taking the log of hte
+%   y-axis. The default is 100.
 
     %% parameters
     alpha = [];
@@ -128,7 +158,7 @@ function [starts, ends, range_scores] = find_audio_pitch(audio, template, fs, va
     function [match_starts, match_ends, match_scores] = match_via_dtw(feat_template, feat_audio, thresh_score)
         % calcualte scores
         % cor has corresponding start times for minimum warping path
-        [scores, cor] = dtpa_c(feat_template, feat_audio, max_lag, alpha);
+        [scores, cor] = dtpa(feat_template, feat_audio, max_lag, alpha);
         change_in_len = (1:length(scores)) - cor - size(feat_template, 2);
         
         % debug
