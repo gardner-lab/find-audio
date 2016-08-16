@@ -1,12 +1,10 @@
 /**
- * This is the C/MEX code of dynamic time warping of two signals
- *
- * compile: 
- *     mex dtw_ua_c.c
- *
- * usage:
- *     d=dtw_ua_c(s,t)
- *     where s is unanchored signal 1 (template), t is signal 2 (signal)
+ * This is the C version of the dtw_ua_cos.m function, which offers substantial performance 
+ * benefits in terms of faster execution and lower memory usage.
+ * 
+ * To compile, run the command: `compile_dt_mex`.
+ * 
+ * Usage mirrors the dtw_ua_cos.m function. Run `help dtw_ua_cos` for more information.
  */
 
 #include "mex.h"

@@ -1,12 +1,10 @@
 /**
- * This is the C/MEX code of dynamic time pitch alignment
- *
- * compile: 
- *     mex dtpa_c.c
- *
- * usage:
- *     d=dtpa_c(s,t[,maxLag[,alpha]])
- *     where s is unanchored signal 1 (template), t is signal 2 (signal)
+ * This is the C version of the dtpa.m function, which offers substantial performance 
+ * benefits in terms of faster execution and lower memory usage.
+ * 
+ * To compile, run the command: `compile_dt_mex`.
+ * 
+ * Usage mirrors the dtpa.m function. Run `help dtpa` for more information.
  */
 
 #include "mex.h"

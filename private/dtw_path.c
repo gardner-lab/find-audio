@@ -1,9 +1,10 @@
 /**
- * This is the C/MEX code of dynamic time warping of two signals
- *
- * usage:
- *     path=dtw_c(s,t)  or  d=dtw_c(s,t)
- *     where s is signal 1, t is signal 2, w is window parameter 
+ * This is the C version of the dtw_path.m function, which offers substantial performance 
+ * benefits in terms of faster execution and lower memory usage.
+ * 
+ * To compile, run the command: `compile_dt_mex`.
+ * 
+ * Usage mirrors the dtw_path.m function. Run `help dtw_path` for more information.
  */
 
 #include "mex.h"
