@@ -1,7 +1,7 @@
 function [] = make_template();
 
-fft_size = 256;
-fft_time_shift_seconds = 0.002;
+fft_size = 512;
+fft_time_shift_seconds = 0.001;
 
 
 
@@ -9,6 +9,9 @@ fft_time_shift_seconds = 0.002;
 [filename, pathname, filterindex] = uigetfile('*.wav', 'Audio file containing a suitable template');
 
 [mic_data, fs] = audioread(strcat(pathname, filesep, filename));
+[B A] = butter(2, [0.03 0.95]);
+mic_data = filtfilt(B, A, double(mic_data));
+
 audio_times = (0:length(mic_data))/fs;
 
 noverlap = fft_size - (floor(fs * fft_time_shift_seconds));
@@ -22,9 +25,10 @@ speck = abs(speck);
 times = times - times(1) + fft_size/fs;
 
 [nfreqs, ntimes] = size(speck);
+med = median(reshape(speck, 1, []));
+speck(find(speck <= med)) = med;
 f = figure(893475);
 im = imagesc(times, freqs/1000, log(speck+eps));
-%im = imagesc(log(speck+eps));
 xlabel('time (s)');
 ylabel('frequency (kHz)');
 axis xy;
@@ -35,6 +39,13 @@ draw_button = uicontrol('Style', 'pushbutton', 'String', 'Choose', ...
     'Callback', 'uiresume(gcbf)');
     
 uiwait(gcf);
+
+% If uiwait() returns due to the window getting closed, just exit.
+if ~ishandle(f) | ~isvalid(f)
+    disp('Canceled.')
+    return;
+end
+
 position = get(gca, 'XLim');
 position_i = find(audio_times >= position(1) & audio_times <= position(2));
 template = mic_data(position_i);
@@ -48,4 +59,6 @@ end
 
 audiowrite(strcat(pathname, filesep, filename), template, fs);
 disp(sprintf('Saved template as %s', strcat(pathname, filesep, filename)));
-close(f);
+if ishandle(f) & isvalid(f)
+    close(f);
+end
