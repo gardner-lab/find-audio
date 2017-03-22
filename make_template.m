@@ -27,10 +27,14 @@ function [template_fname, source_fname] = make_template();
     times = times - times(1) + fft_size/fs;
     
     [nfreqs, ntimes] = size(speck);
-    m = mean(reshape(speck, 1, []));
-    speck(find(speck <= m)) = m;
+    
+    % Kill off any signal below mean-1std, making the spectrogram prettier:
+    speck = reshape(zscore(speck(:)), size(speck)) + 1;
+    speck(find(speck < 0)) = 0;
+    speck = log(speck + eps);
+
     f = figure(893476);
-    imagesc(times, freqs/1000, log(speck+eps));
+    imagesc(times, freqs/1000, speck);
     xlabel('time (s)');
     ylabel('frequency (kHz)');
     axis xy;
