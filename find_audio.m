@@ -80,6 +80,11 @@ function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin
 %   FIND_AUDIO(..., 'freq_range', FREQ_RANGE) overrides the default
 %   frequency range used for warping. FREQ_RANGE must be a vector of length
 %   two. Defaults to [1000 9000] Hz.
+%
+%   FIND_AUDIO(..., 'match_single', true) conveys that audio contains a
+%   single instance of the template. Rather than using a threshold, this
+%   causes the matching function to use the lowest start and end match
+%   times and will return a single start, end and score.
 
     %% parameters
     alpha = [];
@@ -94,6 +99,7 @@ function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin
     threshold_score = [];
     debug = false; % popup figures showing scores, path lengths and thresholds
     max_overlap = 0.1; % fraction of template length
+    match_single = false; % audio contains one instance of the template, find it no matter what
     calculate_threshold = false; % used internally for calculating threshold
 
     % load custom parameters
@@ -230,6 +236,16 @@ function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin
         % debug
         if debug
             o_scores = scores;
+        end
+        
+        % single extraction mode
+        if match_single
+            t = sort(scores);
+            if isempty(thresh_score)
+                thresh_score = t(4);
+            else
+                thresh_score = t(thresh_score);
+            end
         end
 
         % threshold
