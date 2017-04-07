@@ -1,4 +1,4 @@
-function [] = timewarp_process_directory(template_filename, threshold, minsong, minnonsong);
+function timewarp_process_directory(template_filename, threshold, minsong, minnonsong)
 % Zebra finch song processing:
 %
 % This is a bridge between raw audio recordings of zebra finch, Nathan Perkins's dynamic timewarp song finder
@@ -48,16 +48,14 @@ if ~exist('minnonsong', 'var')
     end
 end
 
-global wbar;
-
 if isempty(template_filename) ...
-        | ( ~exist(template_filename, 'file') & ~exist(strcat(template_filename, '.wav'), 'file'))
+        || ( ~exist(template_filename, 'file') && ~exist(strcat(template_filename, '.wav'), 'file'))
     [template_filename, template_source_filename] = make_template();
 end
 [template, template_fs] = audioread(template_filename);
 template_length = length(template);
 
-if ~exist('threshold', 'var') | isempty(threshold) | isnan(threshold) | threshold==0
+if ~exist('threshold', 'var') || isempty(threshold) || isnan(threshold) || threshold==0
     randagain = randperm(length(files));
 
     yn = 'n';
@@ -77,7 +75,7 @@ if ~exist('threshold', 'var') | isempty(threshold) | isnan(threshold) | threshol
             [a, b] = audioread(files(randagain(i)).name);
             if b ~= template_source_fs
                 error('Found an audio file that has different fs than the sample.');
-            elseif size(a) == size(template_source) & all(a == template_source)
+            elseif size(a) == size(template_source) && all(a == template_source)
                 continue;
             end
             template_source = [template_source; a];
@@ -101,7 +99,7 @@ nonsong_n = 100;
 nonsong_i = 0;
 nonsong = zeros(template_length, nonsong_n);
 
-if ~exist('wbar', 'var') | isempty(wbar) | ~ishandle(wbar) | ~isvalid(wbar)
+if ~exist('wbar', 'var') || isempty(wbar) || ~ishandle(wbar) || ~isvalid(wbar)
     wbar = waitbar(0, 'Processing...');
 else
     waitbar(0, wbar);
@@ -111,17 +109,17 @@ start_time = datetime('now');
 eta = 'Newtonmas';
 
 for f = 1:nfiles
-    if ~isnan(minsong) & ~isnan(minnonsong)
+    if ~isnan(minsong) && ~isnan(minnonsong)
         waitbar(min(song_i/minsong, nonsong_i/minnonsong), wbar, sprintf('Done around %s.', eta));
     else
         waitbar(f/nfiles, wbar, sprintf('Done around %s.', eta));
     end
         
-    if song_i >= minsong & nonsong_i >= minnonsong
+    if song_i >= minsong && nonsong_i >= minnonsong
         % Since the expensive step is find_audio and we have to run that for both song and non-song, there is no point in breaking
         % early if e.g. song_i >> minsong but nonsong_i < minnonsong.
-        disp(sprintf('Reached the requested amount of data. %d songs, %d non-songs, %d%% of files processed.', ...
-            song_i, nonsong_i, round(f*100/nfiles)));
+        fprintf('Reached the requested amount of data. %d songs, %d non-songs, %d%% of files processed.\n', ...
+            song_i, nonsong_i, round(f*100/nfiles));
         break;
     end
     
@@ -131,15 +129,15 @@ for f = 1:nfiles
     % Find likely matches. The threshold is increased here so we get lots of possible positives, so that the negatives are
     % definitely very much non-song.
     [starts, ends, scores] = find_audio(d, template, fs, 'threshold_score', threshold*NONSONG_THRESHOLD_GAP);
-    disp(sprintf('%s: %d regions excluded from non-song, %d above threshold.', ...
-        files(f).name, length(starts), length(find(scores <= threshold))));
+    fprintf('%s: %d regions excluded from non-song, %d above threshold.\n', ...
+        files(f).name, length(starts), length(find(scores <= threshold)));
     for n = 1:length(starts)
         % Toss them if they're not good enough.
         % BUT if they're in the grey zone, add them to allsamples_i.
         sample_i = find(times >= starts(n) & times <= ends(n));
         allsamples_i = [allsamples_i sample_i]; % Keep track of these for later...
 
-        if scores(n) <= threshold & song_i < minsong
+        if scores(n) <= threshold && song_i < minsong
             sample_length = length(sample_i);
             %% Stretch or compress the audio to make it the same length as the sample? THIS IS A TERRIBLE IDEA!
             %sample_r = resample(sample, template_length, sample_length);
@@ -152,7 +150,7 @@ for f = 1:nfiles
             end
             
             % If the padding pushes us over the edge of the available data, discard and ignore.
-            if sample_i(1) < 1 | sample_i(end) > length(d)
+            if sample_i(1) < 1 || sample_i(end) > length(d)
                 continue;
             end
             % Preallocate some more memory, as required
@@ -197,15 +195,14 @@ for f = 1:nfiles
     end
     
     if pause_for_check
-        disp('Press a key...');
+        fprintf('Press a key...\n');
         pause;
     end
 end
 close(wbar);
-wbar = [];
 
-song = song(:, 1:song_i);
-nonsong = nonsong(:, 1:nonsong_i);
+song = song(:, 1:song_i); %#ok<NASGU>
+nonsong = nonsong(:, 1:nonsong_i); %#ok<NASGU>
 
 save('song.mat', 'song', 'nonsong', 'fs');
 
