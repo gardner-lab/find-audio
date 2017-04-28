@@ -273,18 +273,24 @@ function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin
             threshold_length = size(feat_template, 2);
         end
         
-        % no zero starts
-        if ~match_single
+        if match_single
+            % match single... short circuit sliding window logic
+            [~, potential_ends] = min(scores);
+            
+            % update start index
+            cor(cor == 0) = 1;
+        else        
+            % no zero starts
             scores(cor == 0) = nan;
+
+            % find minimum by sliding window
+            idx = sliding_window_indices(length(scores), round(size(feat_template, 2) / 2), round(size(feat_template, 2) / 4));
+            [mn, row] = min(scores(idx));
+            time_idx_with_min = row + idx(1, :) - 1; % convert row number to time index
+
+            % potential starts
+            potential_ends = unique(time_idx_with_min(~isnan(mn)));
         end
-
-        % find minimum by sliding window
-        idx = sliding_window_indices(length(scores), round(size(feat_template, 2) / 2), round(size(feat_template, 2) / 4));
-        [mn, row] = min(scores(idx));
-        time_idx_with_min = row + idx(1, :) - 1; % convert row number to time index
-
-        % potential starts
-        potential_ends = unique(time_idx_with_min(~isnan(mn)));
         
         % debug window
         if debug
