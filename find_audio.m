@@ -272,7 +272,9 @@ function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin
         end
         
         % no zero starts
-        scores(cor == 0) = nan;
+        if ~match_single
+            scores(cor == 0) = nan;
+        end
 
         % find minimum by sliding window
         idx = sliding_window_indices(length(scores), round(size(feat_template, 2) / 2), round(size(feat_template, 2) / 4));
