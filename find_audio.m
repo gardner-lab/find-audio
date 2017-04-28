@@ -269,6 +269,8 @@ function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin
         if ~isempty(constrain_length)
             threshold_length = constrain_length * size(feat_template, 2);
             scores(abs(change_in_len) > threshold_length) = nan;
+        else
+            threshold_length = size(feat_template, 2);
         end
         
         % no zero starts
