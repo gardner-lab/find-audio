@@ -251,12 +251,7 @@ function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin
         
         % single extraction mode
         if match_single
-            t = sort(scores);
-            if isempty(thresh_score)
-                thresh_score = t(4);
-            else
-                thresh_score = t(thresh_score);
-            end
+            thresh_score = Inf;
         end
 
         % threshold
@@ -286,10 +281,18 @@ function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin
         
         if match_single
             % match single... short circuit sliding window logic
-            [~, potential_ends] = min(scores);
+            [s, potential_ends] = min(scores);
+            
+            % no score
+            if isnan(s)
+                potential_ends = [];
+            end
             
             % update start index
-            cor(cor == 0) = 1;
+            if any(cor(potential_ends) == 0)
+                warning('Matches at boundary, may be clipped.');
+                cor(cor == 0) = 1;
+            end
         else        
             % no zero starts
             scores(cor == 0) = nan;
