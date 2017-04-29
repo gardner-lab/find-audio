@@ -224,7 +224,18 @@ function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin
 
     function idx = sliding_window_indices(length, win_length, win_step)
         win = 0:(win_length - 1);
-        idx = bsxfun(@plus, 1:win_step:(length - win_length + 1), win');
+        
+        % length - win_length + 1 provides all valid indices (but misses
+        % some at the end of the length)
+        
+        % length - win_step + 1 provides all indices (as well as a few past
+        % the end of length; as result, clip indices past length)
+        
+        idx = bsxfun(@plus, 1:win_step:(length - win_step + 1), win');
+        
+        if idx(end) > length
+            idx(idx > length) = length;
+        end
     end
 
     function [match_starts, match_ends, match_scores] = match_via_dtw(feat_template, feat_audio, thresh_score)
