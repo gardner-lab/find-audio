@@ -258,7 +258,7 @@ function [starts, ends, range_scores] = find_audio(audio, template, fs, varargin
         if isempty(thresh_score)
             scores_median = median(scores);
             scores_min = min(scores);
-            thresh_score = (scores_median + scores_min) / 2;
+            thresh_score = 0.75 * scores_median + 0.25 * scores_min;% original= %(scores_median + scores_min) / 2;
             
             if calculate_threshold
                 match_starts = 0;
