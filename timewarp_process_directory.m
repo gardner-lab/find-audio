@@ -28,7 +28,7 @@ threshold_detect_segment_s = 200; % Build a snippet of audio around this long (s
 show_detection_points = true;
 pause_for_check = false;
 
-files = dir('channel*.wav');
+files = dir('*.m4a');
 [~, sorted_index] = sortrows({files.name}');
 % sorted_index = randperm(length(files)); % Maybe randomise the file order?
 files = files(sorted_index);
