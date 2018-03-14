@@ -21,7 +21,7 @@ double vectorDistance(double *s, double *t, int k) {
     double result = 0;
     
 #if __APPLE__
-    // surprisingly, this may not be faster...
+    /* surprisingly, this may not be faster... */
     vDSP_distancesqD(s, 1, t, 1, &result, k);
 #else
     double ss, tt;
@@ -45,26 +45,34 @@ enum step {
 };
 
 mxArray *dtw_path_c(double *mat_template, double *mat_signal, int cols_template, int cols_signal, int rows, double *alphas) {
-    // memory
+    /* memory */
     double *mat_score;
     enum step *mat_step;
     
-    // iteration variables
+    /* iteration variables */
     int i_template, i_signal;
     int col_cur, col_last;
     int row_cur, row_last;
     
-    // per iteration variables
+    /* per iteration variables */
     double cost;
     double alpha;
     double t_path, b_path;
     enum step b_step;
     
-    // allocate memory
+    /* path building variables */
+    double *mat_path;
+    int step_count;
+    
+    /* return building variables */
+	mxArray *ret;
+    double *ptr;
+    
+    /* allocate memory */
     mat_score = (double *)mxCalloc((cols_template + 1) * (cols_signal + 1), sizeof(double));
     mat_step = (enum step *)mxCalloc((cols_template + 1) * (cols_signal + 1), sizeof(enum step));
     
-    // seed memory
+    /* seed memory */
     for (i_signal = 1; i_signal <= cols_signal; ++i_signal) {
         mat_score[i_signal * (cols_template + 1)] = DBL_MAX;
     }
@@ -72,44 +80,44 @@ mxArray *dtw_path_c(double *mat_template, double *mat_signal, int cols_template,
         mat_score[i_template] = DBL_MAX;
     }
     
-    // dynamic programming
-    // for each column of the signal...
+    /* dynamic programming */
+    /* for each column of the signal... */
     for (i_signal = 1; i_signal <= cols_signal; ++i_signal) {
-        // iteration variables (easier lookup in matrix)
+        /* iteration variables (easier lookup in matrix) */
         col_cur = i_signal * (cols_template + 1);
         col_last = (i_signal - 1) * (cols_template + 1);
         
-        // for each column of the tempalte...
+        /* for each column of the tempalte... */
         for (i_template = 1; i_template <= cols_template; ++i_template) {
-            // iteration variables (easier lookup in matrix)
+            /* iteration variables (easier lookup in matrix) */
             row_cur = i_template;
             row_last = i_template - 1;
             
-            // get current alpha
+            /* get current alpha */
             alpha = alphas[i_template - 1];
             
-            // calculate norm
+            /* calculate norm */
             cost = vectorDistance(mat_signal + rows * (i_signal - 1), mat_template + rows * (i_template - 1), rows);
             
-            // special is nan
+            /* special is nan */
             if isnan(cost) {
-                // assume diagonal
+                /* assume diagonal */
                 b_path = mat_score[col_last + row_last];
                 b_step = DIAGONAL;
             }
             else {
-                // diagonal
+                /* diagonal */
                 b_path = mat_score[col_last + row_last] + cost;
                 b_step = DIAGONAL;
                 
-                // up
+                /* up */
                 t_path = mat_score[col_cur + row_last] + cost * alpha;
                 if (t_path < b_path) {
                     b_path = t_path;
                     b_step = UP;
                 }
                 
-                // left
+                /* left */
                 t_path = mat_score[col_last + row_cur] + cost * alpha;
                 if (t_path < b_path) {
                     b_path = t_path;
@@ -117,26 +125,26 @@ mxArray *dtw_path_c(double *mat_template, double *mat_signal, int cols_template,
                 }
             }
             
-            // store values
+            /* store values */
             mat_score[col_cur + row_cur] = b_path;
             mat_step[col_cur + row_cur] = b_step;
         }
     }
     
-    // add up steps
-    // reuse mat_score meory to hold path (since doubles are easier to pass back to matlab)
-    double *mat_path = mat_score + (cols_template + 1) * (cols_signal + 1);
-    int step_count = 0;
+    /* add up steps */
+    /* reuse mat_score meory to hold path (since doubles are easier to pass back to matlab) */
+    mat_path = mat_score + (cols_template + 1) * (cols_signal + 1);
+    step_count = 0;
     i_signal = cols_signal;
     i_template = cols_template;
     while (i_template > 0 || i_signal > 0) {
-        // write it
+        /* write it */
         mat_path -= 2;
         mat_path[0] = (double)i_template;
         mat_path[1] = (double)i_signal;
         ++step_count;
         
-        // step backwards
+        /* step backwards */
         col_cur = i_signal * (cols_template + 1);
         row_cur = i_template;
         switch (mat_step[col_cur + row_cur]) {
@@ -153,12 +161,12 @@ mxArray *dtw_path_c(double *mat_template, double *mat_signal, int cols_template,
         }
     }
     
-    // generate memory to return
-    mxArray *ret = mxCreateDoubleMatrix(2, step_count, mxREAL);
-    double *ptr = mxGetPr(ret);
+    /* generate memory to return */
+    ret = mxCreateDoubleMatrix(2, step_count, mxREAL);
+    ptr = mxGetPr(ret);
     memcpy(ptr, mat_path, 2 * step_count * sizeof(double));
     
-    // free memory
+    /* free memory */
     mxFree(mat_score);
     mxFree(mat_step);
     
@@ -178,7 +186,8 @@ double getScalar(const mxArray *in, const char *err_id, const char *err_str) {
 /* the gateway function */
 void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     double *s, *t;
-    int ns,nt,k;
+    int ns, nt, k;
+    int i;
     double alpha;
     double *alphas;
     bool free_alphas = false;
@@ -209,7 +218,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     
     /* get alpha */
     if (nrhs >= 3) {
-        // accept vector or scalar
+        /* accept vector or scalar */
         if (mxGetN(prhs[2]) == ns && mxGetM(prhs[2]) == 1) {
             alphas = mxGetPr(prhs[2]);
         }
@@ -218,7 +227,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             
             free_alphas = true;
             alphas = (double *)mxMalloc(ns * sizeof(double));
-            for (int i = 0; i < ns; ++i) {
+            for (i = 0; i < ns; ++i) {
                 alphas[i] = alpha;
             }
         }
@@ -226,7 +235,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     else {
         free_alphas = true;
         alphas = (double *)mxMalloc(ns * sizeof(double));
-        for (int i = 0; i < ns; ++i) {
+        for (i = 0; i < ns; ++i) {
             alphas[i] = 1;
         }
     }

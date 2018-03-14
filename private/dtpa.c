@@ -16,14 +16,14 @@
 
 double vectorDistance(double *s, double *t, int len, int lag) {
     double result = 0;
-    double ss, tt; // hold current value from vector
-    int x, y; // indices into vector
+    double ss, tt; /* hold current value from vector */
+    int x, y; /* indices into vector */
     
     for (x = 0; x < len; x++) {
-        // apply lag to index
+        /* apply lag to index */
         y = x + lag;
         
-        // values
+        /* values */
         ss = s[x];
         tt = (y >= 0 && y < len ? t[y] : 0);
         
@@ -36,36 +36,36 @@ double vectorDistance(double *s, double *t, int len, int lag) {
 }
 
 void dtw_v2_c(double *mat_template, double *mat_signal, int cols_template, int cols_signal, int rows, int max_lag, double *alphas, double *out_score, double *out_start) {
-    // memory
-    double *mat_score[2]; // matrix of scores
-    int *mat_start[2]; // matrix of starts
+    /* memory */
+    double *mat_score[2]; /* matrix of scores */
+    int *mat_start[2]; /* matrix of starts */
     
-    // iteration variables
+    /* iteration variables */
     int i_template, i_signal, i_offset;
     int num_offsets;
     int col_cur, col_last;
     int row_cur, row_last;
     
-    // per iteration variables
+    /* per iteration variables */
     double cost;
     double alpha;
     double t_path, b_path;
     int b_start;
     
-    // lag setup
+    /* lag setup */
     if (max_lag == -1 || max_lag > (rows - 1)) {
         max_lag = rows - 1;
     }
     num_offsets = 1 + 2 * max_lag;
     
-    // allocate memory
+    /* allocate memory */
     mat_score[0] = (double *)mxCalloc((cols_template + 1) * num_offsets, sizeof(double));
     mat_score[1] = (double *)mxCalloc((cols_template + 1) * num_offsets, sizeof(double));
     
     mat_start[0] = (int *)mxCalloc((cols_template + 1) * num_offsets, sizeof(int));
     mat_start[1] = (int *)mxCalloc((cols_template + 1) * num_offsets, sizeof(int));
     
-    // seed memory
+    /* seed memory */
     for (i_template = 1; i_template <= cols_template; ++i_template) {
         row_cur = i_template * num_offsets;
         for (i_offset = 0; i_offset < num_offsets; ++i_offset) {
@@ -73,67 +73,67 @@ void dtw_v2_c(double *mat_template, double *mat_signal, int cols_template, int c
         }
     }
     
-    // dynamic programming
-    // for each column of the signal...
+    /* dynamic programming */
+    /* for each column of the signal... */
     for (i_signal = 1; i_signal <= cols_signal; ++i_signal) {
-        // iteration variables (easier lookup in matrix)
+        /* iteration variables (easier lookup in matrix) */
         col_cur = i_signal % 2;
         col_last = (i_signal - 1) % 2;
         
-        // seed start
+        /* seed start */
         for (i_offset = 0; i_offset < num_offsets; ++i_offset) {
             mat_start[col_cur][i_offset] = i_signal;
         }
         
-        // for each column of the tempalte...
+        /* for each column of the tempalte... */
         for (i_template = 1; i_template <= cols_template; ++i_template) {
-            // iteration variables (easier lookup in matrix)
+            /* iteration variables (easier lookup in matrix) */
             row_cur = i_template * num_offsets;
             row_last = (i_template - 1) * num_offsets;
             
-            // get current alpha
+            /* get current alpha */
             alpha = alphas[i_template - 1];
             
-            // for each offset...
+            /* for each offset... */
             for (i_offset = 0; i_offset < num_offsets; ++i_offset) {
-                // calculate cost
+                /* calculate cost */
                 cost = vectorDistance(mat_signal + rows * (i_signal - 1), mat_template + rows * (i_template - 1), rows, i_offset - max_lag);
                 
-                // diagonal, same offset
+                /* diagonal, same offset */
                 b_path = mat_score[col_last][row_last + i_offset] + cost;
                 b_start = mat_start[col_last][row_last + i_offset];
                 
-                // up, same offset
+                /* up, same offset */
                 t_path = mat_score[col_cur][row_last + i_offset] + cost * alpha;
                 if (t_path < b_path) {
                     b_path = t_path;
                     b_start = mat_start[col_cur][row_last + i_offset];
                 }
                 
-                // left, same offset
+                /* left, same offset */
                 t_path = mat_score[col_last][row_cur + i_offset] + cost * alpha;
                 if (t_path < b_path) {
                     b_path = t_path;
                     b_start = mat_start[col_last][row_cur + i_offset];
                 }
                 
-                // shift offset down
+                /* shift offset down */
                 if (i_offset > 0) {
-                    // diagonal, shift offset
+                    /* diagonal, shift offset */
                     t_path = mat_score[col_last][row_last + i_offset - 1] + cost;
                     if (t_path < b_path) {
                         b_path = t_path;
                         b_start = mat_start[col_last][row_last + i_offset - 1];
                     }
                     
-                    // up, shift offset
+                    /* up, shift offset */
                     t_path = mat_score[col_cur][row_last + i_offset - 1] + cost * alpha;
                     if (t_path < b_path) {
                         b_path = t_path;
                         b_start = mat_start[col_cur][row_last + i_offset - 1];
                     }
                     
-                    // left, shift offset
+                    /* left, shift offset */
                     t_path = mat_score[col_last][row_cur + i_offset - 1] + cost * alpha;
                     if (t_path < b_path) {
                         b_path = t_path;
@@ -141,23 +141,23 @@ void dtw_v2_c(double *mat_template, double *mat_signal, int cols_template, int c
                     }
                 }
                 
-                // shift offset up
+                /* shift offset up */
                 if ((i_offset + 1) < num_offsets) {
-                    // diagonal, shift offset
+                    /* diagonal, shift offset */
                     t_path = mat_score[col_last][row_last + i_offset + 1] + cost;
                     if (t_path < b_path) {
                         b_path = t_path;
                         b_start = mat_start[col_last][row_last + i_offset + 1];
                     }
                     
-                    // up, shift offset
+                    /* up, shift offset */
                     t_path = mat_score[col_cur][row_last + i_offset + 1] + cost * alpha;
                     if (t_path < b_path) {
                         b_path = t_path;
                         b_start = mat_start[col_cur][row_last + i_offset + 1];
                     }
                     
-                    // left, shift offset
+                    /* left, shift offset */
                     t_path = mat_score[col_last][row_cur + i_offset + 1] + cost * alpha;
                     if (t_path < b_path) {
                         b_path = t_path;
@@ -165,15 +165,15 @@ void dtw_v2_c(double *mat_template, double *mat_signal, int cols_template, int c
                     }
                 }
                 
-                // store values
+                /* store values */
                 mat_score[col_cur][row_cur + i_offset] = b_path;
                 mat_start[col_cur][row_cur + i_offset] = b_start;
             }
         }
         
-        // store values
-        row_cur = cols_template * num_offsets; // does not actually need to be reset
-        // POTENTIALLY ACCELERATE
+        /* store values */
+        row_cur = cols_template * num_offsets; /* does not actually need to be reset */
+        /* POTENTIALLY ACCELERATE */
         for (i_offset = 0; i_offset < num_offsets; ++i_offset) {
             if (0 == i_offset || mat_score[col_cur][row_cur + i_offset] < out_score[i_signal - 1]) {
                 out_score[i_signal - 1] = mat_score[col_cur][row_cur + i_offset];
@@ -184,7 +184,7 @@ void dtw_v2_c(double *mat_template, double *mat_signal, int cols_template, int c
         }
     }
     
-    // free memory
+    /* free memory */
     mxFree(mat_score[0]);
     mxFree(mat_score[1]);
     mxFree(mat_start[0]);
@@ -205,6 +205,7 @@ double getScalar(const mxArray *in, const char *err_id, const char *err_str) {
 void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     double *s, *t;
     int ns, nt, k;
+    int i;
     int max_lag;
     double alpha;
     double *alphas;
@@ -246,7 +247,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     
     /* get alpha */
     if (nrhs >= 4) {
-        // accept vector or scalar
+        /* accept vector or scalar */
         if (mxGetN(prhs[3]) == ns && mxGetM(prhs[3]) == 1) {
             alphas = mxGetPr(prhs[3]);
         }
@@ -255,7 +256,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             
             free_alphas = true;
             alphas = (double *)mxMalloc(ns * sizeof(double));
-            for (int i = 0; i < ns; ++i) {
+            for (i = 0; i < ns; ++i) {
                 alphas[i] = alpha;
             }
         }
@@ -263,7 +264,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     else {
         free_alphas = true;
         alphas = (double *)mxMalloc(ns * sizeof(double));
-        for (int i = 0; i < ns; ++i) {
+        for (i = 0; i < ns; ++i) {
             alphas[i] = 1;
         }
     }

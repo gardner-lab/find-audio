@@ -21,7 +21,7 @@ double vectorDistance(double *s, double *t, int k) {
     double result = 0;
     
 #if __APPLE__
-    // surprisingly, this may not be faster...
+    /* surprisingly, this may not be faster... */
     vDSP_distancesqD(s, 1, t, 1, &result, k);
 #else
     double ss, tt;
@@ -39,75 +39,75 @@ double vectorDistance(double *s, double *t, int k) {
 }
 
 void dtw_ua_c(double *mat_template, double *mat_signal, int cols_template, int cols_signal, int rows, double *alphas, double *out_score, double *out_start) {
-    // memory
-    double *mat_score[2]; // matrix of scores
-    int *mat_start[2]; // matrix of starts
+    /* memory */
+    double *mat_score[2]; /* matrix of scores */
+    int *mat_start[2]; /* matrix of starts */
     
-    // iteration variables
+    /* iteration variables */
     int i_template, i_signal;
     int col_cur, col_last;
     int row_cur, row_last;
     
-    // per iteration variables
+    /* per iteration variables */
     double cost;
     double alpha;
     double t_path, b_path;
     int b_start;
     
-    // allocate memory
+    /* allocate memory */
     mat_score[0] = (double *)mxCalloc(cols_template + 1, sizeof(double));
     mat_score[1] = (double *)mxCalloc(cols_template + 1, sizeof(double));
     
     mat_start[0] = (int *)mxCalloc(cols_template + 1, sizeof(int));
     mat_start[1] = (int *)mxCalloc(cols_template + 1, sizeof(int));
     
-    // seed memory
+    /* seed memory */
     for (i_template = 1; i_template <= cols_template; ++i_template) {
         row_cur = i_template;
         mat_score[0][row_cur] = DBL_MAX;
     }
     
-    // dynamic programming
-    // for each column of the signal...
+    /* dynamic programming */
+    /* for each column of the signal... */
     for (i_signal = 1; i_signal <= cols_signal; ++i_signal) {
-        // iteration variables (easier lookup in matrix)
+        /* iteration variables (easier lookup in matrix) */
         col_cur = i_signal % 2;
         col_last = (i_signal - 1) % 2;
         
-        // seed start
+        /* seed start */
         mat_start[col_cur][0] = i_signal;
         
-        // for each column of the tempalte...
+        /* for each column of the tempalte... */
         for (i_template = 1; i_template <= cols_template; ++i_template) {
-            // iteration variables (easier lookup in matrix)
+            /* iteration variables (easier lookup in matrix) */
             row_cur = i_template;
             row_last = i_template - 1;
             
-            // get current alpha
+            /* get current alpha */
             alpha = alphas[i_template - 1];
             
-            // calculate norm
+            /* calculate norm */
             cost = vectorDistance(mat_signal + rows * (i_signal - 1), mat_template + rows * (i_template - 1), rows);
             
-            // special is nan
+            /* special is nan */
             if isnan(cost) {
-                // assume diagonal
+                /* assume diagonal */
                 b_path = mat_score[col_last][row_last];
                 b_start = mat_start[col_last][row_last];
             }
             else {
-                // diagonal
+                /* diagonal */
                 b_path = mat_score[col_last][row_last] + cost;
                 b_start = mat_start[col_last][row_last];
                 
-                // up
+                /* up */
                 t_path = mat_score[col_cur][row_last] + cost * alpha;
                 if (t_path < b_path) {
                     b_path = t_path;
                     b_start = mat_start[col_cur][row_last];
                 }
                 
-                // left
+                /* left */
                 t_path = mat_score[col_last][row_cur] + cost * alpha;
                 if (t_path < b_path) {
                     b_path = t_path;
@@ -115,20 +115,20 @@ void dtw_ua_c(double *mat_template, double *mat_signal, int cols_template, int c
                 }
             }
             
-            // store values
+            /* store values */
             mat_score[col_cur][row_cur] = b_path;
             mat_start[col_cur][row_cur] = b_start;
         }
         
-        // store values
-        row_cur = cols_template; // does not actually need to be reset
+        /* store values */
+        row_cur = cols_template; /* does not actually need to be reset */
         out_score[i_signal - 1] = mat_score[col_cur][row_cur];
         if (out_start) {
             out_start[i_signal - 1] = (double)mat_start[col_cur][row_cur];
         }
     }
     
-    // free memory
+    /* free memory */
     mxFree(mat_score[0]);
     mxFree(mat_score[1]);
     mxFree(mat_start[0]);
@@ -148,7 +148,8 @@ double getScalar(const mxArray *in, const char *err_id, const char *err_str) {
 /* the gateway function */
 void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     double *s, *t;
-    int ns,nt,k;
+    int ns, nt, k;
+    int i;
     double alpha;
     double *alphas;
     bool free_alphas = false;
@@ -181,7 +182,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     
     /* get alpha */
     if (nrhs >= 3) {
-        // accept vector or scalar
+        /* accept vector or scalar */
         if (mxGetN(prhs[2]) == ns && mxGetM(prhs[2]) == 1) {
             alphas = mxGetPr(prhs[2]);
         }
@@ -190,7 +191,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             
             free_alphas = true;
             alphas = (double *)mxMalloc(ns * sizeof(double));
-            for (int i = 0; i < ns; ++i) {
+            for (i = 0; i < ns; ++i) {
                 alphas[i] = alpha;
             }
         }
@@ -198,7 +199,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     else {
         free_alphas = true;
         alphas = (double *)mxMalloc(ns * sizeof(double));
-        for (int i = 0; i < ns; ++i) {
+        for (i = 0; i < ns; ++i) {
             alphas[i] = 1;
         }
     }
