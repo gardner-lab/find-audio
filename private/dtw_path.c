@@ -17,7 +17,7 @@
 #include <Accelerate/Accelerate.h>
 #endif
 
-double vectorDistance(double *s, double *t, int k) {
+static double vectorDistance(double *s, double *t, size_t k) {
     double result = 0;
     
 #if __APPLE__
@@ -25,7 +25,7 @@ double vectorDistance(double *s, double *t, int k) {
     vDSP_distancesqD(s, 1, t, 1, &result, k);
 #else
     double ss, tt;
-    int x;
+    size_t x;
     for (x = 0; x < k; x++) {
         ss = s[x];
         tt = t[x];
@@ -44,15 +44,15 @@ enum step {
     LEFT
 };
 
-mxArray *dtw_path_c(double *mat_template, double *mat_signal, int cols_template, int cols_signal, int rows, double *alphas) {
+static mxArray *dtw_path_c(double *mat_template, double *mat_signal, size_t cols_template, size_t cols_signal, size_t rows, double *alphas) {
     /* memory */
     double *mat_score;
     enum step *mat_step;
     
     /* iteration variables */
-    int i_template, i_signal;
-    int col_cur, col_last;
-    int row_cur, row_last;
+    size_t i_template, i_signal;
+    size_t col_cur, col_last;
+    size_t row_cur, row_last;
     
     /* per iteration variables */
     double cost;
@@ -62,7 +62,7 @@ mxArray *dtw_path_c(double *mat_template, double *mat_signal, int cols_template,
     
     /* path building variables */
     double *mat_path;
-    int step_count;
+    size_t step_count;
     
     /* return building variables */
 	mxArray *ret;
@@ -173,7 +173,7 @@ mxArray *dtw_path_c(double *mat_template, double *mat_signal, int cols_template,
     return ret;
 }
 
-double getScalar(const mxArray *in, const char *err_id, const char *err_str) {
+static double getScalar(const mxArray *in, const char *err_id, const char *err_str) {
     /* check scalar */
     if (!mxIsDouble(in) || mxIsComplex(in) || mxGetN(in) * mxGetM(in) != 1) {
         mexErrMsgIdAndTxt(err_id, err_str);
@@ -184,10 +184,10 @@ double getScalar(const mxArray *in, const char *err_id, const char *err_str) {
 }
 
 /* the gateway function */
-void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     double *s, *t;
-    int ns, nt, k;
-    int i;
+    size_t ns, nt, k;
+    size_t i;
     double alpha;
     double *alphas;
     bool free_alphas = false;

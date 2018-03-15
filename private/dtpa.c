@@ -14,7 +14,7 @@
 #include <float.h>
 #include <string.h>
 
-double vectorDistance(double *s, double *t, int len, int lag) {
+static double vectorDistance(double *s, double *t, int len, int lag) {
     double result = 0;
     double ss, tt; /* hold current value from vector */
     int x, y; /* indices into vector */
@@ -35,35 +35,32 @@ double vectorDistance(double *s, double *t, int len, int lag) {
     return result;
 }
 
-void dtw_v2_c(double *mat_template, double *mat_signal, int cols_template, int cols_signal, int rows, int max_lag, double *alphas, double *out_score, double *out_start) {
+static void dtw_v2_c(double *mat_template, double *mat_signal, size_t cols_template, size_t cols_signal, size_t rows, size_t max_lag, double *alphas, double *out_score, double *out_start) {
     /* memory */
     double *mat_score[2]; /* matrix of scores */
-    int *mat_start[2]; /* matrix of starts */
+    size_t *mat_start[2]; /* matrix of starts */
     
     /* iteration variables */
-    int i_template, i_signal, i_offset;
-    int num_offsets;
-    int col_cur, col_last;
-    int row_cur, row_last;
+    size_t i_template, i_signal, i_offset;
+    size_t num_offsets;
+    size_t col_cur, col_last;
+    size_t row_cur, row_last;
     
     /* per iteration variables */
     double cost;
     double alpha;
     double t_path, b_path;
-    int b_start;
+    size_t b_start;
     
     /* lag setup */
-    if (max_lag == -1 || max_lag > (rows - 1)) {
-        max_lag = rows - 1;
-    }
     num_offsets = 1 + 2 * max_lag;
     
     /* allocate memory */
     mat_score[0] = (double *)mxCalloc((cols_template + 1) * num_offsets, sizeof(double));
     mat_score[1] = (double *)mxCalloc((cols_template + 1) * num_offsets, sizeof(double));
     
-    mat_start[0] = (int *)mxCalloc((cols_template + 1) * num_offsets, sizeof(int));
-    mat_start[1] = (int *)mxCalloc((cols_template + 1) * num_offsets, sizeof(int));
+    mat_start[0] = (size_t *)mxCalloc((cols_template + 1) * num_offsets, sizeof(size_t));
+    mat_start[1] = (size_t *)mxCalloc((cols_template + 1) * num_offsets, sizeof(size_t));
     
     /* seed memory */
     for (i_template = 1; i_template <= cols_template; ++i_template) {
@@ -97,7 +94,7 @@ void dtw_v2_c(double *mat_template, double *mat_signal, int cols_template, int c
             /* for each offset... */
             for (i_offset = 0; i_offset < num_offsets; ++i_offset) {
                 /* calculate cost */
-                cost = vectorDistance(mat_signal + rows * (i_signal - 1), mat_template + rows * (i_template - 1), rows, i_offset - max_lag);
+                cost = vectorDistance(mat_signal + rows * (i_signal - 1), mat_template + rows * (i_template - 1), (int)rows, (int)i_offset - (int)max_lag);
                 
                 /* diagonal, same offset */
                 b_path = mat_score[col_last][row_last + i_offset] + cost;
@@ -191,7 +188,7 @@ void dtw_v2_c(double *mat_template, double *mat_signal, int cols_template, int c
     mxFree(mat_start[1]);
 }
 
-double getScalar(const mxArray *in, const char *err_id, const char *err_str) {
+static double getScalar(const mxArray *in, const char *err_id, const char *err_str) {
     /* check scalar */
     if (!mxIsDouble(in) || mxIsComplex(in) || mxGetN(in) * mxGetM(in) != 1) {
         mexErrMsgIdAndTxt(err_id, err_str);
@@ -202,11 +199,11 @@ double getScalar(const mxArray *in, const char *err_id, const char *err_str) {
 }
 
 /* the gateway function */
-void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     double *s, *t;
-    int ns, nt, k;
-    int i;
-    int max_lag;
+    size_t ns, nt, k;
+    size_t i;
+    size_t max_lag;
     double alpha;
     double *alphas;
     bool free_alphas = false;
@@ -219,14 +216,6 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     }
     if (nlhs != 1 && nlhs != 2) {
         mexErrMsgIdAndTxt("MATLAB:dtw_v2_c:invalidNumOutputs", "One or two outputs required.");
-    }
-    
-    /* get maxLag */
-    if (nrhs >= 3) {
-        max_lag = (int)getScalar(prhs[2], "MATLAB:dtw_v2_c:maxLagNotScalar", "Max lag must be a scalar.");
-    }
-    else {
-        max_lag = -1;
     }
     
     /*  create a pointer to the input matrix s */
@@ -243,6 +232,19 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     nt = mxGetN(prhs[1]);
     if(mxGetM(prhs[1]) != k) {
         mexErrMsgIdAndTxt("MATLAB:dtw_v2_c:dimNotMatch", "Dimensions of input s and t must match.");
+    }
+    
+    /* get maxLag */
+    if (nrhs >= 3) {
+        max_lag = (size_t)getScalar(prhs[2], "MATLAB:dtw_v2_c:maxLagNotScalar", "Max lag must be a scalar.");
+        
+        // bound it by 1 less than the number of rows
+        if (max_lag > (k - 1)) {
+        	max_lag = k - 1;
+        }
+    }
+    else {
+        max_lag = k - 1;
     }
     
     /* get alpha */

@@ -17,7 +17,7 @@
 #include <Accelerate/Accelerate.h>
 #endif
 
-double vectorDistance(double *s, double *t, int k) {
+static double vectorDistance(double *s, double *t, size_t k) {
     double dot = 0;
     double len_s = 0;
     double len_t = 0;
@@ -29,7 +29,7 @@ double vectorDistance(double *s, double *t, int k) {
     vDSP_svesqD(t, 1, &len_t, k);
 #else
     double ss, tt;
-    int x;
+    size_t x;
     for (x = 0; x < k; x++) {
         ss = s[x];
         tt = t[x];
@@ -43,28 +43,28 @@ double vectorDistance(double *s, double *t, int k) {
     return dot / (sqrt(len_s) * sqrt(len_t));
 }
 
-void dtw_ua_c(double *mat_template, double *mat_signal, int cols_template, int cols_signal, int rows, double *alphas, double *out_score, double *out_start) {
+static void dtw_ua_c(double *mat_template, double *mat_signal, size_t cols_template, size_t cols_signal, size_t rows, double *alphas, double *out_score, double *out_start) {
     /* memory */
     double *mat_score[2]; /* matrix of scores */
-    int *mat_start[2]; /* matrix of starts */
+    size_t *mat_start[2]; /* matrix of starts */
     
     /* iteration variables */
-    int i_template, i_signal;
-    int col_cur, col_last;
-    int row_cur, row_last;
+    size_t i_template, i_signal;
+    size_t col_cur, col_last;
+    size_t row_cur, row_last;
     
     /* per iteration variables */
     double cost;
     double alpha;
     double t_path, b_path;
-    int b_start;
+    size_t b_start;
     
     /* allocate memory */
     mat_score[0] = (double *)mxCalloc(cols_template + 1, sizeof(double));
     mat_score[1] = (double *)mxCalloc(cols_template + 1, sizeof(double));
     
-    mat_start[0] = (int *)mxCalloc(cols_template + 1, sizeof(int));
-    mat_start[1] = (int *)mxCalloc(cols_template + 1, sizeof(int));
+    mat_start[0] = (size_t *)mxCalloc(cols_template + 1, sizeof(size_t));
+    mat_start[1] = (size_t *)mxCalloc(cols_template + 1, sizeof(size_t));
     
     /* seed memory */
     for (i_template = 1; i_template <= cols_template; ++i_template) {
@@ -132,7 +132,7 @@ void dtw_ua_c(double *mat_template, double *mat_signal, int cols_template, int c
     mxFree(mat_start[1]);
 }
 
-double getScalar(const mxArray *in, const char *err_id, const char *err_str) {
+static double getScalar(const mxArray *in, const char *err_id, const char *err_str) {
     /* check scalar */
     if (!mxIsDouble(in) || mxIsComplex(in) || mxGetN(in) * mxGetM(in) != 1) {
         mexErrMsgIdAndTxt(err_id, err_str);
@@ -143,10 +143,10 @@ double getScalar(const mxArray *in, const char *err_id, const char *err_str) {
 }
 
 /* the gateway function */
-void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     double *s, *t;
-    int ns, nt, k;
-    int i;
+    size_t ns, nt, k;
+    size_t i;
     double alpha;
     double *alphas;
     bool free_alphas = false;
